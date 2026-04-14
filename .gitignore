@@ -1,2 +1,4 @@
 data/
 node_modules/
+.env
+.doubao_tab_id

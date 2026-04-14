@@ -7,13 +7,17 @@
 #   ge-doubao-cli --prompt "展厅机器人推荐哪个品牌"
 #   ge-doubao-cli --prompt "..." --port 9222 [--timeout 90]
 #
-# Prerequisites: Chrome/Edge with CDP on --port, logged into doubao.com, python3 + websockets
+# Prerequisites: Chrome with CDP on --port, logged into doubao.com, python3 + websockets
 #
 # Exit codes: 0=success, 1=general, 2=login_required, 3=timeout, 4=input_not_found
 set -euo pipefail
 
+# Load .env if present
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+[[ -f "$SCRIPT_DIR/.env" ]] && source "$SCRIPT_DIR/.env"
+
 PROMPT=""
-PORT=9222
+PORT="${CDP_PORT:-9222}"
 TIMEOUT=90
 
 while [[ $# -gt 0 ]]; do
@@ -30,9 +34,16 @@ if [[ -z "$PROMPT" ]]; then
   exit 1
 fi
 
+# Check Python dependency
+if ! python3 -c "import websockets" 2>/dev/null; then
+  echo "Error: Python package 'websockets' is required." >&2
+  echo "Install it with:  pip3 install websockets" >&2
+  exit 1
+fi
+
 # Each project owns one dedicated tab. The tab's targetId is persisted here so
 # we never touch another program's tabs even if they also use this Chrome instance.
-STATE_FILE="$(cd "$(dirname "$0")/.." && pwd)/data/.doubao_tab_id"
+STATE_FILE="$SCRIPT_DIR/.doubao_tab_id"
 
 # Run the entire scraping flow in a single python3 process
 exec python3 - "$PORT" "$PROMPT" "$TIMEOUT" "$STATE_FILE" << 'PYEOF'
@@ -52,7 +63,9 @@ def get_pages():
     try:
         return json.loads(urllib.request.urlopen(f'http://localhost:{port}/json/list', timeout=5).read())
     except Exception:
-        fail(f"CDP not reachable on port {port}", 1)
+        fail(f"CDP not reachable on port {port}. Launch Chrome with CDP enabled:\n"
+             f"  open -a 'Google Chrome' --args --remote-debugging-port={port}\n"
+             f"Then open doubao.com and log in.", 1)
 
 def find_tab_ws(tab_id, pages):
     for p in pages:
@@ -67,7 +80,6 @@ def load_stored_id():
         return None
 
 def save_tab_id(tab_id):
-    os.makedirs(os.path.dirname(state_file), exist_ok=True)
     with open(state_file, 'w') as f:
         f.write(tab_id)
 

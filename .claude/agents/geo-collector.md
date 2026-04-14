@@ -171,7 +171,7 @@ Collected: N  Skipped: M  Errors: P
 claude --agent geo-collector
 
 # Prerequisites:
-# 1. Chrome/Edge running with CDP: open -a "Google Chrome" --args --remote-debugging-port=9222
+# 1. Chrome running with CDP: open -a "Google Chrome" --args --remote-debugging-port=9222
 # 2. Logged into doubao.com in that browser
 # 3. python3 + websockets installed: pip3 install websockets
 ```
