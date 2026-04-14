@@ -7,13 +7,17 @@
 #   ge-doubao-cli --prompt "展厅机器人推荐哪个品牌"
 #   ge-doubao-cli --prompt "..." --port 9222 [--timeout 90]
 #
-# Prerequisites: Chrome/Edge with CDP on --port, logged into doubao.com, python3 + websockets
+# Prerequisites: Chrome with CDP on --port, logged into doubao.com, python3 + websockets
 #
 # Exit codes: 0=success, 1=general, 2=login_required, 3=timeout, 4=input_not_found
 set -euo pipefail
 
+# Load .env if present
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+[[ -f "$SCRIPT_DIR/.env" ]] && source "$SCRIPT_DIR/.env"
+
 PROMPT=""
-PORT=9222
+PORT="${CDP_PORT:-9222}"
 TIMEOUT=90
 
 while [[ $# -gt 0 ]]; do
@@ -27,6 +31,13 @@ done
 
 if [[ -z "$PROMPT" ]]; then
   echo "Error: --prompt is required" >&2
+  exit 1
+fi
+
+# Check Python dependency
+if ! python3 -c "import websockets" 2>/dev/null; then
+  echo "Error: Python package 'websockets' is required." >&2
+  echo "Install it with:  pip3 install websockets" >&2
   exit 1
 fi
 
@@ -48,7 +59,9 @@ async def main():
     try:
         pages = json.loads(urllib.request.urlopen(f'http://localhost:{port}/json', timeout=5).read())
     except Exception:
-        fail(f"CDP not reachable on port {port}", 1)
+        fail(f"CDP not reachable on port {port}. Launch Chrome with CDP enabled:\n"
+             f"  open -a 'Google Chrome' --args --remote-debugging-port={port}\n"
+             f"Then open doubao.com and log in.", 1)
 
     ws_url = None
     for p in pages:

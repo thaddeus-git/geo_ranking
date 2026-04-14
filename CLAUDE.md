@@ -12,12 +12,13 @@ The agent loops over all keyword files, queries Doubao, extracts brands, and app
 
 ## Prerequisites
 
-- **Chrome/Edge with CDP:**
+- **Chrome with CDP:**
   ```bash
   open -a "Google Chrome" --args --remote-debugging-port=9222
   ```
   Then log into doubao.com in that browser window.
 - **python3 + websockets:** `pip3 install websockets`
+- **Configuration:** Copy `.env.example` to `.env` and adjust if needed. `CDP_PORT` defaults to `9222`.
 
 ## Architecture
 
