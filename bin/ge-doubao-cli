@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# ge-doubao-cli — Generative Engine scraper for doubao.com
+# Uses CDP isolated world (like Chrome extension content scripts) to interact
+# with doubao.com. Undetectable by the page's anti-bot scripts.
+#
+# Usage:
+#   ge-doubao-cli --prompt "展厅机器人推荐哪个品牌"
+#   ge-doubao-cli --prompt "..." --port 9222 [--timeout 90]
+#
+# Prerequisites: Chrome/Edge with CDP on --port, logged into doubao.com, python3 + websockets
+#
+# Exit codes: 0=success, 1=general, 2=login_required, 3=timeout, 4=input_not_found
+set -euo pipefail
+
+PROMPT=""
+PORT=9222
+TIMEOUT=90
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --prompt)  PROMPT="$2"; shift 2 ;;
+    --port)    PORT="$2"; shift 2 ;;
+    --timeout) TIMEOUT="$2"; shift 2 ;;
+    *) echo "Usage: ge-doubao-cli --prompt <text> [--port 9222] [--timeout 90]" >&2; exit 1 ;;
+  esac
+done
+
+if [[ -z "$PROMPT" ]]; then
+  echo "Error: --prompt is required" >&2
+  exit 1
+fi
+
+# Run the entire scraping flow in a single python3 process
+exec python3 - "$PORT" "$PROMPT" "$TIMEOUT" << 'PYEOF'
+import asyncio, json, sys, time, urllib.request, websockets
+
+port, prompt, timeout = sys.argv[1], sys.argv[2], int(sys.argv[3])
+
+def fail(msg, code=1):
+    print(json.dumps({"error": msg, "platform": "doubao"}, ensure_ascii=False))
+    sys.exit(code)
+
+def log(msg):
+    print(msg, file=sys.stderr, flush=True)
+
+async def main():
+    # Find doubao page
+    try:
+        pages = json.loads(urllib.request.urlopen(f'http://localhost:{port}/json', timeout=5).read())
+    except Exception:
+        fail(f"CDP not reachable on port {port}", 1)
+
+    ws_url = None
+    for p in pages:
+        url = p.get('url', '')
+        if 'doubao.com' in url and not url.startswith('devtools://'):
+            ws_url = p['webSocketDebuggerUrl']
+            break
+    if not ws_url:
+        fail("no doubao.com tab found — open doubao.com in the browser", 1)
+
+    async with websockets.connect(ws_url) as ws:
+        msg_id = 0
+        async def cdp(method, params={}):
+            nonlocal msg_id; msg_id += 1
+            await ws.send(json.dumps({'id': msg_id, 'method': method, 'params': params}))
+            while True:
+                r = json.loads(await asyncio.wait_for(ws.recv(), 15))
+                if r.get('id') == msg_id: return r
+
+        async def new_iso():
+            fid = (await cdp('Page.getFrameTree'))['result']['frameTree']['frame']['id']
+            return (await cdp('Page.createIsolatedWorld', {
+                'frameId': fid, 'worldName': f'geo{msg_id}'
+            }))['result']['executionContextId']
+
+        async def ev(ctx, expr):
+            r = await cdp('Runtime.evaluate', {
+                'expression': expr, 'contextId': ctx,
+                'returnByValue': True, 'awaitPromise': True
+            })
+            return r.get('result', {}).get('result', {}).get('value', '')
+
+        # Navigate to fresh chat
+        await cdp('Page.navigate', {'url': 'https://www.doubao.com/chat/'})
+        await asyncio.sleep(3)
+        ctx = await new_iso()
+
+        # Check login
+        url = await ev(ctx, 'location.href')
+        if 'login' in url or 'passport' in url:
+            fail("login_required — log into doubao.com in the browser", 2)
+
+        # Fill textarea
+        prompt_json = json.dumps(prompt)
+        fill = await ev(ctx, f'''(function(){{
+            var ta = document.querySelector("textarea");
+            if (!ta) return "no_textarea";
+            ta.focus();
+            var s = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,"value").set;
+            s.call(ta, {prompt_json});
+            ta.dispatchEvent(new Event("input",{{bubbles:true}}));
+            ta.dispatchEvent(new Event("change",{{bubbles:true}}));
+            return "filled";
+        }})()''')
+        if fill == 'no_textarea':
+            fail("input_not_found — no textarea on page", 4)
+        log(f"fill: ok, prompt_len={len(prompt)}")
+        await asyncio.sleep(0.5)
+
+        # Click send button (find last visible button with SVG near bottom of page)
+        sent = await ev(ctx, '''(function(){
+            var all = document.querySelectorAll("button");
+            for (var i = all.length - 1; i >= 0; i--) {
+                var b = all[i], r = b.getBoundingClientRect();
+                if (r.width > 0 && r.bottom > 600 && b.querySelector("svg")) {
+                    b.click(); return "ok";
+                }
+            }
+            return "no_button";
+        })()''')
+        log(f"send: {sent}")
+        await asyncio.sleep(3)
+
+        # Check URL changed
+        url = await ev(ctx, 'location.href')
+        if url == 'https://www.doubao.com/chat/' or '/chat/' not in url:
+            fail("send_failed — message was not sent", 1)
+        chat_url = url
+        log(f"url: {chat_url}")
+
+        # Wait for server to generate response, then refresh to get persisted text
+        log(f"wait: {timeout}s max, polling every 5s after initial 10s")
+        await asyncio.sleep(10)
+        elapsed = 13  # 3s after nav + 10s wait
+
+        while elapsed < timeout:
+            await cdp('Page.navigate', {'url': chat_url})
+            await asyncio.sleep(5)
+            elapsed += 5
+            ctx = await new_iso()
+
+            rlen = await ev(ctx, '''(function(){
+                var m = document.querySelectorAll("[class*='flow-markdown-body']");
+                return m.length > 0 ? m[m.length-1].textContent.length : 0;
+            })()''')
+            log(f"poll: elapsed={elapsed}s len={rlen}")
+
+            if isinstance(rlen, (int, float)) and rlen > 10:
+                break
+
+        # Extract response
+        response = await ev(ctx, '''(function(){
+            var m = document.querySelectorAll("[class*='flow-markdown-body']");
+            return m.length > 0 ? m[m.length-1].textContent.trim() : "";
+        })()''')
+
+        if not response or len(response) < 5:
+            fail(f"timeout — no AI response after {elapsed}s", 3)
+
+        log(f"done: response_len={len(response)}")
+
+        # Output JSON
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        print(json.dumps({
+            'platform': 'doubao',
+            'prompt': prompt,
+            'response_text': response,
+            'timestamp': ts,
+            'url': chat_url,
+        }, ensure_ascii=False))
+
+asyncio.run(main())
+PYEOF

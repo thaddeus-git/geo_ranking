@@ -1,0 +1,104 @@
+
+
+{
+  "穿山甲机器人": {
+    "models": [
+      { "name": "小雪", "aliases": [] },
+      { "name": "小鱼", "aliases": ["Timo"] },
+      { "name": "艾米", "aliases": [] },
+      { "name": "爱丽丝", "aliases": [] }
+    ]
+  },
+  "新松机器人": {
+    "models": [
+      { "name": "松果 PRO", "aliases": [] }
+    ]
+  },
+  "优必选科技": {
+    "models": [
+      { "name": "克鲁泽", "aliases": ["Cruzr"] },
+      { "name": "克鲁泽 1S", "aliases": ["Cruzr 1S"] }
+    ]
+  },
+  "广州昂宝电子": {
+    "models": [
+      { "name": "昂小宝", "aliases": [] }
+    ]
+  },
+  "科沃斯": {
+    "models": [
+      { "name": "旺宝", "aliases": ["Benebot"] }
+    ]
+  },
+  "中智卫安": {
+    "models": [
+      { "name": "小咖", "aliases": ["Voca", "迎宾服务机器人"] },
+      { "name": "迎宾巡更机器人", "aliases": [] },
+      { "name": "智能访客机器人", "aliases": [] },
+      { "name": "智能接待机器人", "aliases": [] }
+    ]
+  },
+  "创泽机器人": {
+    "models": [
+      { "name": "导览机器人", "aliases": [] },
+      { "name": "创创", "aliases": ["智能服务机器人"] },
+      { "name": "卡酷", "aliases": ["大屏服务机器人", "kaku"] }
+    ]
+  },
+  "安思若普": {
+    "models": [
+      { "name": "AMG-G1", "aliases": [] },
+      { "name": "AMB-MINI", "aliases": ["安小秘"] },
+      { "name": "AMB-MI/BMI", "aliases": [] },
+      { "name": "ATB-2", "aliases": [] },
+      { "name": "AnsropPepper", "aliases": [] }
+    ]
+  },
+  "派宝机器人": {
+    "models": [
+      { "name": "X3", "aliases": ["导览机器人"] },
+      { "name": "X2", "aliases": ["行业机器人"] },
+      { "name": "X1", "aliases": ["展厅机器人"] },
+      { "name": "P3", "aliases": ["迎宾机器人"] }
+    ]
+  },
+  "达闼科技": {
+    "models": [
+      { "name": "Cloud Ginger", "aliases": [] }
+    ]
+  },
+  "洛必德": {
+    "models": [
+      { "name": "智能接待机器人", "aliases": [] }
+    ]
+  },
+  "小笨智能": {
+    "models": [
+      { "name": "智大屏", "aliases": ["智能商用服务机器人"] },
+      { "name": "智小鱼", "aliases": ["智能商用服务机器人"] },
+      { "name": "智灵动", "aliases": ["智能商用服务机器人"] }
+    ]
+  },
+  "国辰机器人": {
+    "models": [
+      { "name": "迎宾机器人", "aliases": [] }
+    ]
+  },
+  "Temi机器人": {
+    "models": [
+      { "name": "Temi", "aliases": [] }
+    ]
+  },
+  "澳博": {
+    "models": [
+      { "name": "卡卡", "aliases": [] },
+      { "name": "小蓝帽", "aliases": [] },
+      { "name": "银银", "aliases": [] },
+      { "name": "大白", "aliases": [] },
+      { "name": "蒜头", "aliases": [] },
+      { "name": "佩佩", "aliases": [] },
+      { "name": "Q比", "aliases": [] },
+      { "name": "佩佩3代", "aliases": [] }
+    ]
+  }
+}
