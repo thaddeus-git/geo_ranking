@@ -19,6 +19,16 @@ The agent loops over all keyword files, queries Doubao, extracts brands, and app
   Then log into doubao.com in that browser window.
 - **python3 + websockets:** `pip3 install websockets`
 
+## Setup
+
+Run the init script to install all dependencies and prepare the environment:
+
+```bash
+bash scripts/init.sh
+```
+
+This installs `websockets`, makes the CLI executable, and creates the `data/` directory.
+
 ## Architecture
 
 ```
