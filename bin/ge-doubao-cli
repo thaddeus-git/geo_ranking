@@ -41,11 +41,16 @@ if ! python3 -c "import websockets" 2>/dev/null; then
   exit 1
 fi
 
-# Run the entire scraping flow in a single python3 process
-exec python3 - "$PORT" "$PROMPT" "$TIMEOUT" << 'PYEOF'
-import asyncio, json, sys, time, urllib.request, websockets
+# Each project owns one dedicated tab. The tab's targetId is persisted here so
+# we never touch another program's tabs even if they also use this Chrome instance.
+STATE_FILE="$SCRIPT_DIR/.doubao_tab_id"
 
-port, prompt, timeout = sys.argv[1], sys.argv[2], int(sys.argv[3])
+# Run the entire scraping flow in a single python3 process
+exec python3 - "$PORT" "$PROMPT" "$TIMEOUT" "$STATE_FILE" << 'PYEOF'
+import asyncio, json, os, sys, time, urllib.request, websockets
+
+port, prompt, timeout, state_file = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
+TAB_LABEL = 'geo-doubao'  # visible in Chrome; lets humans tell tabs apart
 
 def fail(msg, code=1):
     print(json.dumps({"error": msg, "platform": "doubao"}, ensure_ascii=False))
@@ -54,23 +59,51 @@ def fail(msg, code=1):
 def log(msg):
     print(msg, file=sys.stderr, flush=True)
 
-async def main():
-    # Find doubao page
+def get_pages():
     try:
-        pages = json.loads(urllib.request.urlopen(f'http://localhost:{port}/json', timeout=5).read())
+        return json.loads(urllib.request.urlopen(f'http://localhost:{port}/json/list', timeout=5).read())
     except Exception:
         fail(f"CDP not reachable on port {port}. Launch Chrome with CDP enabled:\n"
              f"  open -a 'Google Chrome' --args --remote-debugging-port={port}\n"
              f"Then open doubao.com and log in.", 1)
 
-    ws_url = None
+def find_tab_ws(tab_id, pages):
     for p in pages:
-        url = p.get('url', '')
-        if 'doubao.com' in url and not url.startswith('devtools://'):
-            ws_url = p['webSocketDebuggerUrl']
-            break
-    if not ws_url:
-        fail("no doubao.com tab found — open doubao.com in the browser", 1)
+        if p.get('id') == tab_id and p.get('type') == 'page':
+            return p['webSocketDebuggerUrl']
+    return None
+
+def load_stored_id():
+    try:
+        return open(state_file).read().strip() or None
+    except FileNotFoundError:
+        return None
+
+def save_tab_id(tab_id):
+    with open(state_file, 'w') as f:
+        f.write(tab_id)
+
+async def main():
+    # Acquire our dedicated tab — never touches tabs owned by other programs
+    pages = get_pages()
+    stored_id = load_stored_id()
+    ws_url = find_tab_ws(stored_id, pages) if stored_id else None
+
+    if ws_url:
+        log(f"tab: reusing [{TAB_LABEL}] id={stored_id[:8]}…")
+    else:
+        if stored_id:
+            log(f"tab: [{TAB_LABEL}] id={stored_id[:8]}… gone (browser restarted?), creating new")
+        # Create a new tab; Chrome names it after the URL until doubao loads its own title
+        try:
+            new_tab = json.loads(urllib.request.urlopen(
+                f'http://localhost:{port}/json/new?https://www.doubao.com/chat/', timeout=5
+            ).read())
+        except Exception as e:
+            fail(f"could not create new tab: {e}", 1)
+        save_tab_id(new_tab['id'])
+        ws_url = new_tab['webSocketDebuggerUrl']
+        log(f"tab: created new [{TAB_LABEL}] id={new_tab['id'][:8]}…")
 
     async with websockets.connect(ws_url) as ws:
         msg_id = 0
