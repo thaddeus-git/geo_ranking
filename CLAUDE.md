@@ -2,13 +2,21 @@
 
 This file provides guidance to Claude Code when working with code in this repository.
 
+## First-time setup
+
+```bash
+bash scripts/init.sh
+```
+
+Installs Node deps, creates `data/geo_results.db`, imports any legacy `keywords/*.txt` into the DB, and verifies Chrome CDP / python prerequisites.
+
 ## How to Run
 
 ```bash
 claude --agent geo-collector
 ```
 
-The agent loops over all keyword files, queries Doubao, extracts brands, and appends results to `data/results.jsonl`.
+The agent reads active keywords from the DB, queries Doubao, extracts brands via the `brand-extractor` skill, and appends one row to `runs` + N rows to `brands` via `db-cli append`.
 
 ## Prerequisites
 
@@ -16,66 +24,79 @@ The agent loops over all keyword files, queries Doubao, extracts brands, and app
   ```bash
   open -a "Google Chrome" --args --remote-debugging-port=9222
   ```
-  Then log into doubao.com in that browser window.
-- **python3 + websockets:** `pip3 install websockets`
-- **Configuration:** Copy `.env.example` to `.env` and adjust if needed. `CDP_PORT` defaults to `9222`.
+  Then log into doubao.com in that window.
+- **Node 18+** and `npm install` complete (handled by `scripts/init.sh`).
+- **python3 + websockets:** `pip3 install websockets` (used by `bin/ge-doubao-cli`).
+- **Configuration:** Copy `.env.example` to `.env` if you want to override defaults. `CDP_PORT` defaults to `9222`. `GEO_DB_PATH` defaults to `data/geo_results.db`.
 
 ## Architecture
 
 ```
-.claude/agents/geo-collector.md     — orchestrator loop
-.claude/skills/brand-extractor/     — LLM brand extraction + new entrant detection
-keywords/*.txt                      — one prompt per line; # lines are comments
-bin/ge-doubao-cli                   — bash+Python3 CDP scraper for doubao.com
-competitors.json                    — human-curated catalog of known robot brands
-data/results.jsonl                  — gitignored output; one JSON record per keyword per day
+.claude/agents/geo-collector.md   — orchestrator loop
+.claude/skills/brand-extractor/   — LLM brand extraction + new-entrant detection
+bin/db-cli                        — Node/TS CLI: keywords + runs + brands (SQLite)
+bin/ge-doubao-cli                 — bash+python3 CDP scraper for doubao.com
+src/db/                           — schema, migrations, prepared-statement helpers
+src/db-cli/                       — one file per subcommand
+competitors.json                  — human-curated catalog of known robot brands
+data/geo_results.db               — gitignored; all state lives here
+scripts/init.sh                   — one-time setup
+.claude/hooks/prepend-bin-path.sh — SessionStart: adds ./bin to PATH
 ```
 
-## Adding Keywords
+## Adding / managing keywords
 
-Add a line to any `keywords/*.txt` file, or create a new `.txt` file. The next run picks it up automatically. Lines starting with `#` are treated as comments.
+Keywords live in the `keywords` table, not files.
 
-## Data Format
+```bash
+db-cli keywords list
+db-cli keywords add --keyword "展厅机器人都有哪些品牌" --pack exhibition-hall-robot
+db-cli keywords deactivate 3    # soft-delete; history preserved
+db-cli keywords activate 3
+```
 
-`data/results.jsonl` — one JSON record per line, one record per keyword per collection day.
+`pack` is a free-form category slug (e.g. `exhibition-hall-robot`, `hospital-guide-robot`). Use the same `pack` for related keywords so you can filter by it later.
 
-| Field | Type | Description |
-|---|---|---|
-| `date` | string | YYYY-MM-DD of collection |
-| `keyword` | string | Full prompt sent to Doubao |
-| `keyword_file` | string | Stem of the source .txt file (e.g., `exhibition-hall-robot`) |
-| `platform` | string | `"doubao"` |
-| `brands` | object[] | Ordered brand list — see below |
-| `brands[].rank` | number | Position in response (1-based) |
-| `brands[].name` | string | Brand name as extracted from response |
-| `brands[].known` | boolean | Whether it matches a known competitor |
-| `brands[].matched_competitor` | string | Key from competitors.json (only when `known: true`) |
-| `new_brands` | string[] | Names of brands not in competitors.json — new entrants |
-| `total_brands` | number | Length of brands array |
-| `response_text` | string | Full Doubao AI response |
-| `timestamp` | string | ISO 8601 from ge-doubao-cli |
+## Running queries
+
+```bash
+db-cli status                             # overall counts
+db-cli today                              # today's runs (tsv)
+db-cli today --json                       # today's runs with full brand arrays
+db-cli list --pack hospital-guide-robot
+db-cli brand-history "猎户星空"           # every time this brand appeared
+```
 
 ## Analysis with jq
 
+`db-cli export` dumps runs to JSONL with the legacy schema (`pack` → `keyword_file`). The jq examples work unchanged against the exported file.
+
 ```bash
-# Show all records: date, keyword, brand count, new brands
+db-cli export --out data/results.jsonl
+
+# All records: date, keyword, brand count, new brands
 jq -r '[.date, .keyword, (.total_brands|tostring), (.new_brands|join(","))] | @tsv' data/results.jsonl
 
-# Show ranked brands for a specific keyword file
+# Ranked brands for a pack
 jq -r 'select(.keyword_file=="exhibition-hall-robot") | [.date, (.brands[] | [(.rank|tostring), .name, (.known|tostring)] | join("\t"))] | @tsv' data/results.jsonl
 
-# Find all new entrants ever detected
-jq -r 'select(.new_brands | length > 0) | [.date, .keyword_file, (.new_brands | join(", "))] | @tsv' data/results.jsonl
-
-# Show today's rankings
+# Today's rankings
 jq -r 'select(.date == (now | strftime("%Y-%m-%d"))) | [.keyword_file, (.brands[] | .name)] | @tsv' data/results.jsonl
 ```
 
+## Schema
+
+`data/geo_results.db` — SQLite, three tables:
+
+- **`keywords`** — `id, keyword, pack, active, created_at`. `UNIQUE(keyword, pack)`.
+- **`runs`** — `id, date, keyword, pack, platform, response_text, timestamp, total_brands, new_brands`. `UNIQUE(date, keyword, platform)` enforces idempotency.
+- **`brands`** — `run_id, rank, name, known, matched_competitor`. Cascades on run delete.
+
 ## competitors.json
 
-Human-maintained catalog of known service robot brands. Structure:
+Human-maintained catalog of known service robot brands:
 ```json
 { "品牌名": { "models": [{ "name": "...", "aliases": ["..."] }] } }
 ```
 
-Do **not** modify it — it is maintained externally. The brand-extractor skill uses it to distinguish known vs. new competitors. New entrants (brands not in this file) are surfaced in `new_brands`.
+Do **not** modify it — it is maintained externally. The brand-extractor skill uses it to distinguish known vs. new competitors. Brands not in this file are surfaced in each run's `new_brands` field.

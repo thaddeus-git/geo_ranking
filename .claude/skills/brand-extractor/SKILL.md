@@ -40,25 +40,24 @@ The caller passes all three fields in the invocation context:
 
 ## Output
 
-Return exactly this structured markdown block:
+Return exactly one fenced JSON block (nothing else — no prose, no tables, no extra commentary). The caller extracts the content between the fences and pipes it straight to `db-cli append`.
 
+````
+```json
+{
+  "brands": [
+    {"rank": 1, "name": "<brand>", "known": true, "matched_competitor": "<top-level key from competitors.json>"},
+    {"rank": 2, "name": "<brand>", "known": false}
+  ],
+  "new_brands": ["<name1>", "<name2>"],
+  "total_brands": 2
+}
 ```
-## Extraction Result
-keyword: <keyword>
-brands:
-  - rank: 1
-    name: <brand name as it appeared in response_text>
-    known: true
-    matched_competitor: <top-level key from competitors.json>
-  - rank: 2
-    name: <brand name>
-    known: false
-new_brands_detected: [<name1>, <name2>]
-total_brands: N
-```
+````
 
 Rules:
 - `name` is the brand as it appeared in the response (strip parenthetical English if present)
 - `matched_competitor` is only present when `known: true`
-- `new_brands_detected` is a flat list of names where `known: false`
-- If no brands found: `brands: []`, `new_brands_detected: []`, `total_brands: 0`
+- `new_brands` is a flat list of names where `known: false`
+- `total_brands` equals `brands.length`
+- If no brands found: `{"brands": [], "new_brands": [], "total_brands": 0}`
