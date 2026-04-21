@@ -6,6 +6,7 @@ import { cmdHasToday } from './has-today.ts';
 import { cmdAppend } from './append.ts';
 import { cmdList } from './list.ts';
 import { cmdToday } from './today.ts';
+import { cmdTodayDate } from './today-date.ts';
 import { cmdBrandHistory } from './brand-history.ts';
 import { cmdKeywords } from './keywords.ts';
 import { cmdCompetitors } from './competitors.ts';
@@ -23,6 +24,7 @@ Results:
   append                           Read JSON record from stdin and insert atomically
   list [--date YYYY-MM-DD] [--pack <name>] [--json]
   today [--json]
+  today-date                       Print today's local date (YYYY-MM-DD) — matches has-today semantics
   brand-history <name> [--json]
 
 Keywords:
@@ -105,6 +107,9 @@ async function main(): Promise<void> {
         break;
       case 'today':
         await cmdToday(parseFlags(rest).flags);
+        break;
+      case 'today-date':
+        await cmdTodayDate();
         break;
       case 'brand-history': {
         const { flags, positionals } = parseFlags(rest);
