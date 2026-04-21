@@ -42,7 +42,7 @@ competitors.json                  — frozen seed; imported once into DB by scri
 scripts/import-competitors.ts     — one-time importer: competitors.json → DB (idempotent)
 data/geo_results.db               — gitignored; all state lives here
 scripts/init.sh                   — one-time setup
-.claude/hooks/prepend-bin-path.sh — SessionStart: adds ./bin to PATH
+.claude/settings.json             — SessionStart hook inlines ./bin PATH injection
 ```
 
 ## Adding / managing keywords
