@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "printf 'export PATH=\"%s/bin:$PATH\"\\n' \"$CLAUDE_PROJECT_DIR\" >> \"$CLAUDE_ENV_FILE\""
+            "command": "[ -n \"$CLAUDE_ENV_FILE\" ] && [ -n \"$CLAUDE_PROJECT_DIR\" ] && printf 'export PATH=\"%s/bin:$PATH\"\\n' \"$CLAUDE_PROJECT_DIR\" >> \"$CLAUDE_ENV_FILE\""
           }
         ]
       }
