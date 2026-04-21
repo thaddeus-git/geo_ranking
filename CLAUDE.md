@@ -8,7 +8,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 bash scripts/init.sh
 ```
 
-Installs Node deps, creates `data/geo_results.db`, imports any legacy `keywords/*.txt` into the DB, and verifies Chrome CDP / python prerequisites.
+Installs Node deps, creates `data/geo_results.db`, and verifies Chrome CDP / python prerequisites.
 
 ## How to Run
 
@@ -65,23 +65,6 @@ db-cli today                              # today's runs (tsv)
 db-cli today --json                       # today's runs with full brand arrays
 db-cli list --pack hospital-guide-robot
 db-cli brand-history "猎户星空"           # every time this brand appeared
-```
-
-## Analysis with jq
-
-`db-cli export` dumps runs to JSONL with the legacy schema (`pack` → `keyword_file`). The jq examples work unchanged against the exported file.
-
-```bash
-db-cli export --out data/results.jsonl
-
-# All records: date, keyword, brand count, new brands
-jq -r '[.date, .keyword, (.total_brands|tostring), (.new_brands|join(","))] | @tsv' data/results.jsonl
-
-# Ranked brands for a pack
-jq -r 'select(.keyword_file=="exhibition-hall-robot") | [.date, (.brands[] | [(.rank|tostring), .name, (.known|tostring)] | join("\t"))] | @tsv' data/results.jsonl
-
-# Today's rankings
-jq -r 'select(.date == (now | strftime("%Y-%m-%d"))) | [.keyword_file, (.brands[] | .name)] | @tsv' data/results.jsonl
 ```
 
 ## Schema

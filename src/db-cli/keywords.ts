@@ -1,5 +1,3 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { basename, join } from 'node:path';
 import { listKeywords, addKeyword, setActive } from '../db/keywords.ts';
 
 type ParseFn = (argv: string[]) => { flags: Record<string, string | boolean>; positionals: string[] };
@@ -8,7 +6,7 @@ export async function cmdKeywords(argv: string[], parse: ParseFn): Promise<void>
   const sub = argv[0];
   const rest = argv.slice(1);
   if (!sub) {
-    console.error('keywords: subcommand required (list | add | activate | deactivate | import)');
+    console.error('keywords: subcommand required (list | add | activate | deactivate)');
     process.exit(2);
   }
   switch (sub) {
@@ -19,7 +17,6 @@ export async function cmdKeywords(argv: string[], parse: ParseFn): Promise<void>
       const { positionals } = parse(rest);
       return cmdSetActive(positionals[0], sub === 'activate');
     }
-    case 'import': return cmdImport(parse(rest).flags);
     default:
       console.error(`keywords: unknown subcommand "${sub}"`);
       process.exit(2);
@@ -78,25 +75,4 @@ function cmdSetActive(idStr: string | undefined, active: boolean): void {
     process.exit(1);
   }
   console.log(`id=${id} ${active ? 'active' : 'inactive'}`);
-}
-
-function cmdImport(flags: Record<string, string | boolean>): void {
-  const dir = typeof flags.from === 'string' ? flags.from : 'keywords';
-  if (!existsSync(dir)) {
-    console.log(`import: ${dir} not found — nothing to do`);
-    return;
-  }
-  let added = 0, existed = 0;
-  for (const file of readdirSync(dir)) {
-    if (!file.endsWith('.txt')) continue;
-    const pack = basename(file, '.txt');
-    const content = readFileSync(join(dir, file), 'utf8');
-    for (const raw of content.split(/\r?\n/)) {
-      const line = raw.trim();
-      if (!line || line.startsWith('#')) continue;
-      const { inserted } = addKeyword(line, pack);
-      if (inserted) added++; else existed++;
-    }
-  }
-  console.log(`import: added=${added} existed=${existed}`);
 }

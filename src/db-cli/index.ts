@@ -7,7 +7,6 @@ import { cmdAppend } from './append.ts';
 import { cmdList } from './list.ts';
 import { cmdToday } from './today.ts';
 import { cmdBrandHistory } from './brand-history.ts';
-import { cmdExport } from './export.ts';
 import { cmdKeywords } from './keywords.ts';
 
 function help(): void {
@@ -23,14 +22,12 @@ Results:
   list [--date YYYY-MM-DD] [--pack <name>] [--json]
   today [--json]
   brand-history <name> [--json]
-  export [--date YYYY-MM-DD] [--out data/results.jsonl]
 
 Keywords:
   keywords list [--pack <name>] [--include-inactive] [--json]
   keywords add --keyword "<text>" --pack <name>
   keywords activate <id>
   keywords deactivate <id>
-  keywords import --from <dir>     One-time: import .txt files (stem = pack)
 
 Other:
   init                             Create schema (idempotent)
@@ -99,9 +96,6 @@ async function main(): Promise<void> {
         await cmdBrandHistory(positionals[0], flags);
         break;
       }
-      case 'export':
-        await cmdExport(parseFlags(rest).flags);
-        break;
       case 'keywords':
         await cmdKeywords(rest, parseFlags);
         break;

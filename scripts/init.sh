@@ -53,16 +53,11 @@ else
   fail "db-cli init failed"; exit 1
 fi
 
-# 5. One-time keyword import (from legacy keywords/*.txt)
+# 5. Keywords
 echo ""
 echo "5. Keywords"
-if [ -d keywords ]; then
-  ./bin/db-cli keywords import --from keywords
-  warn "keywords/ directory still present — safe to delete after verifying with: db-cli keywords list"
-else
-  ACTIVE=$(./bin/db-cli keywords list --json | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>console.log(JSON.parse(s).length))")
-  ok "active keywords in DB: $ACTIVE"
-fi
+ACTIVE=$(./bin/db-cli keywords list --json | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>console.log(JSON.parse(s).length))")
+ok "active keywords in DB: $ACTIVE"
 
 # 6. Chrome CDP reachability (doubao)
 echo ""
