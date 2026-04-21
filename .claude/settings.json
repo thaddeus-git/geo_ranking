@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "Bash(db-cli *)",
+      "Bash(./bin/db-cli *)",
+      "Bash(ge-doubao-cli *)",
+      "Bash(./bin/ge-doubao-cli *)",
+      "Bash(bash *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(chmod *)",
+      "Bash(export PATH=*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/prepend-bin-path.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
