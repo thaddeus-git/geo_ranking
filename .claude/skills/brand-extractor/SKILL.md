@@ -19,6 +19,7 @@ The caller passes all three fields in the invocation context:
 
 1. **Build lookup set** from `competitors_catalog`:
    - All top-level brand keys (e.g., `穿山甲机器人`, `优必选科技`)
+   - All top-level `aliases` values on each brand (e.g., `OrionStar` for `猎户星空`)
    - All model `name` values under each brand
    - All `aliases` strings under each model
    - Store as a flat set for O(1) fuzzy lookup

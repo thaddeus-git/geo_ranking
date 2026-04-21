@@ -76,10 +76,13 @@ The competitors catalog lives in the `competitors` and `competitor_models` table
 ```bash
 db-cli competitors list               # tabular view
 db-cli competitors list --json        # same JSON shape as the former competitors.json
-db-cli competitors show "穿山甲机器人" # name, source, added_at, models
+db-cli competitors show "穿山甲机器人" # name, brand aliases, source, added_at, models
 db-cli competitors add "新品牌"        # insert manually
 db-cli competitors add-model "新品牌" --model "X1" --aliases "alias1,alias2"
+db-cli competitors set-aliases "猎户星空" --aliases "OrionStar,orionstar"  # set/replace brand-level aliases
 ```
+
+Brand aliases (e.g. English names like `OrionStar`) live **only in the DB** — they are not stored in `competitors.json`. Set them via `set-aliases` after `init.sh`.
 
 ## New brand review
 
@@ -103,7 +106,7 @@ After `accept`, the brand is in `competitors` with `source='candidate-accept'` a
 - **`keywords`** — `id, keyword, pack, active, created_at`. `UNIQUE(keyword, pack)`.
 - **`runs`** — `id, date, keyword, pack, platform, response_text, timestamp, total_brands, new_brands`. `UNIQUE(date, keyword, platform)` enforces idempotency.
 - **`brands`** — `run_id, rank, name, known, matched_competitor`. Cascades on run delete.
-- **`competitors`** — `name, added_at, source`. Source is `seed` | `candidate-accept` | `manual`.
+- **`competitors`** — `name, aliases, added_at, source`. `aliases` is a JSON array of brand-level alternate names (e.g. English names). Source is `seed` | `candidate-accept` | `manual`.
 - **`competitor_models`** — `competitor_name, name, aliases` (JSON array). Cascades on competitor delete.
 - **`brand_candidates`** — `name, first_seen, last_seen, sighting_count, reviewed, decision, accepted_at, notes`. Auto-populated when `appendRun` inserts `known=0` brands. `decision` is `NULL` | `'accepted'` | `'rejected'`.
 
