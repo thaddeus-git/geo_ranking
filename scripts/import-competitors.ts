@@ -17,6 +17,7 @@ interface ModelEntry {
 }
 
 interface CatalogEntry {
+  aliases: string[];
   models: ModelEntry[];
 }
 
@@ -27,8 +28,8 @@ migrate();
 let insertedCompetitors = 0;
 let insertedModels = 0;
 
-for (const [brandName, { models }] of Object.entries(catalog)) {
-  if (insertCompetitor(brandName, 'seed')) insertedCompetitors++;
+for (const [brandName, { aliases, models }] of Object.entries(catalog)) {
+  if (insertCompetitor(brandName, 'seed', aliases)) insertedCompetitors++;
   for (const model of models) {
     if (insertCompetitorModel(brandName, model.name, model.aliases)) insertedModels++;
   }

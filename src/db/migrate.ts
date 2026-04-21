@@ -38,6 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_brands_name ON brands(name);
 
 CREATE TABLE IF NOT EXISTS competitors (
   name      TEXT PRIMARY KEY,
+  aliases   TEXT NOT NULL DEFAULT '[]',
   added_at  TEXT NOT NULL DEFAULT (datetime('now')),
   source    TEXT NOT NULL DEFAULT 'seed'
 );
@@ -64,4 +65,10 @@ CREATE INDEX IF NOT EXISTS idx_brand_candidates_pending ON brand_candidates(revi
 
 export function migrate(): void {
   getDb().exec(SCHEMA);
+  // Safe column addition for DBs created before this column existed.
+  try {
+    getDb().exec("ALTER TABLE competitors ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'");
+  } catch {
+    // Column already exists — no-op.
+  }
 }

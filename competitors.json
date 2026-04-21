@@ -1,95 +1,108 @@
-
-
 {
   "穿山甲机器人": {
+    "aliases": [],
     "models": [
       { "name": "小雪", "aliases": [] },
-      { "name": "小鱼", "aliases": ["Timo"] },
+      { "name": "小鱼", "aliases": [] },
       { "name": "艾米", "aliases": [] },
       { "name": "爱丽丝", "aliases": [] }
     ]
   },
   "新松机器人": {
+    "aliases": [],
     "models": [
       { "name": "松果 PRO", "aliases": [] }
     ]
   },
   "优必选科技": {
+    "aliases": [],
     "models": [
-      { "name": "克鲁泽", "aliases": ["Cruzr"] },
-      { "name": "克鲁泽 1S", "aliases": ["Cruzr 1S"] }
+      { "name": "克鲁泽", "aliases": [] },
+      { "name": "克鲁泽 1S", "aliases": [] }
     ]
   },
   "广州昂宝电子": {
+    "aliases": [],
     "models": [
       { "name": "昂小宝", "aliases": [] }
     ]
   },
   "科沃斯": {
+    "aliases": [],
     "models": [
-      { "name": "旺宝", "aliases": ["Benebot"] }
+      { "name": "旺宝", "aliases": [] }
     ]
   },
   "中智卫安": {
+    "aliases": [],
     "models": [
-      { "name": "小咖", "aliases": ["Voca", "迎宾服务机器人"] },
+      { "name": "小咖", "aliases": [] },
       { "name": "迎宾巡更机器人", "aliases": [] },
       { "name": "智能访客机器人", "aliases": [] },
       { "name": "智能接待机器人", "aliases": [] }
     ]
   },
   "创泽机器人": {
+    "aliases": [],
     "models": [
       { "name": "导览机器人", "aliases": [] },
-      { "name": "创创", "aliases": ["智能服务机器人"] },
-      { "name": "卡酷", "aliases": ["大屏服务机器人", "kaku"] }
+      { "name": "创创", "aliases": [] },
+      { "name": "卡酷", "aliases": [] }
     ]
   },
   "安思若普": {
+    "aliases": [],
     "models": [
       { "name": "AMG-G1", "aliases": [] },
-      { "name": "AMB-MINI", "aliases": ["安小秘"] },
+      { "name": "AMB-MINI", "aliases": [] },
       { "name": "AMB-MI/BMI", "aliases": [] },
       { "name": "ATB-2", "aliases": [] },
       { "name": "AnsropPepper", "aliases": [] }
     ]
   },
   "派宝机器人": {
+    "aliases": [],
     "models": [
-      { "name": "X3", "aliases": ["导览机器人"] },
-      { "name": "X2", "aliases": ["行业机器人"] },
-      { "name": "X1", "aliases": ["展厅机器人"] },
-      { "name": "P3", "aliases": ["迎宾机器人"] }
+      { "name": "X3", "aliases": [] },
+      { "name": "X2", "aliases": [] },
+      { "name": "X1", "aliases": [] },
+      { "name": "P3", "aliases": [] }
     ]
   },
   "达闼科技": {
+    "aliases": [],
     "models": [
       { "name": "Cloud Ginger", "aliases": [] }
     ]
   },
   "洛必德": {
+    "aliases": [],
     "models": [
       { "name": "智能接待机器人", "aliases": [] }
     ]
   },
   "小笨智能": {
+    "aliases": [],
     "models": [
-      { "name": "智大屏", "aliases": ["智能商用服务机器人"] },
-      { "name": "智小鱼", "aliases": ["智能商用服务机器人"] },
-      { "name": "智灵动", "aliases": ["智能商用服务机器人"] }
+      { "name": "智大屏", "aliases": [] },
+      { "name": "智小鱼", "aliases": [] },
+      { "name": "智灵动", "aliases": [] }
     ]
   },
   "国辰机器人": {
+    "aliases": [],
     "models": [
       { "name": "迎宾机器人", "aliases": [] }
     ]
   },
   "Temi机器人": {
+    "aliases": [],
     "models": [
       { "name": "Temi", "aliases": [] }
     ]
   },
   "澳博": {
+    "aliases": [],
     "models": [
       { "name": "卡卡", "aliases": [] },
       { "name": "小蓝帽", "aliases": [] },
@@ -100,5 +113,31 @@
       { "name": "Q比", "aliases": [] },
       { "name": "佩佩3代", "aliases": [] }
     ]
+  },
+  "猎户星空": {
+    "aliases": [],
+    "models": [
+      { "name": "豹小秘1", "aliases": [] },
+      { "name": "豹小秘2", "aliases": [] },
+      { "name": "豹小秘lite", "aliases": [] },
+      { "name": "豹小秘pro", "aliases": [] },
+      { "name": "豹小秘mini", "aliases": [] }
+    ]
+  },
+  "科梦奇": {
+    "aliases": [],
+    "models": []
+  },
+  "光泰": {
+    "aliases": [],
+    "models": []
+  },
+  "齐聚机器人": {
+    "aliases": [],
+    "models": []
+  },
+  "安泽机器人": {
+    "aliases": [],
+    "models": []
   }
 }
