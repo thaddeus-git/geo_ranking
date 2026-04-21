@@ -50,7 +50,7 @@ exec python3 - "$PORT" "$PROMPT" "$TIMEOUT" "$STATE_FILE" << 'PYEOF'
 import asyncio, json, os, sys, time, urllib.request, websockets
 
 port, prompt, timeout, state_file = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
-TAB_LABEL = 'geo-doubao'  # visible in Chrome; lets humans tell tabs apart
+TAB_LABEL = 'geo-doubao'  # used in log messages to identify the tab
 
 def fail(msg, code=1):
     print(json.dumps({"error": msg, "platform": "doubao"}, ensure_ascii=False))
