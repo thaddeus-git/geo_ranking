@@ -3,17 +3,11 @@
     "defaultMode": "dontAsk",
     "allow": [
       "Bash(db-cli *)",
-      "Bash(./bin/db-cli *)",
       "Bash(ge-doubao-cli *)",
-      "Bash(./bin/ge-doubao-cli *)",
-      "Bash(bash *)",
-      "Bash(node *)",
       "Bash(npm *)",
       "Bash(npx *)",
       "Bash(git *)",
-      "Bash(gh *)",
-      "Bash(chmod *)",
-      "Bash(export PATH=*)"
+      "Bash(gh *)"
     ]
   },
   "hooks": {
@@ -23,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/prepend-bin-path.sh"
+            "command": "printf 'export PATH=\"%s/bin:$PATH\"\\n' \"$CLAUDE_PROJECT_DIR\" >> \"$CLAUDE_ENV_FILE\""
           }
         ]
       }
