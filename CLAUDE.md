@@ -80,15 +80,31 @@ db-cli competitors add "新品牌"        # insert manually
 db-cli competitors add-model "新品牌" --model "X1" --aliases "alias1,alias2"
 ```
 
+## New brand review
+
+Every unknown brand surfaced by the collector is automatically tracked in `brand_candidates`. Ops uses `db-cli candidates` to triage; accepted candidates move atomically into the `competitors` catalog.
+
+```bash
+db-cli candidates pending                            # unreviewed brands
+db-cli candidates show "新品牌"                      # details + every keyword/date/rank it appeared
+db-cli candidates accept "新品牌" --model "X1" --aliases "alias1,alias2"
+db-cli candidates reject "新品牌" --reason "宣传物料"
+db-cli candidates list --status accepted             # all accepted
+db-cli candidates list --pack hospital-guide-robot   # filter by pack
+```
+
+After `accept`, the brand is in `competitors` with `source='candidate-accept'` and future collector runs will classify it as `known=1`.
+
 ## Schema
 
-`data/geo_results.db` — SQLite, five tables:
+`data/geo_results.db` — SQLite, six tables:
 
 - **`keywords`** — `id, keyword, pack, active, created_at`. `UNIQUE(keyword, pack)`.
 - **`runs`** — `id, date, keyword, pack, platform, response_text, timestamp, total_brands, new_brands`. `UNIQUE(date, keyword, platform)` enforces idempotency.
 - **`brands`** — `run_id, rank, name, known, matched_competitor`. Cascades on run delete.
 - **`competitors`** — `name, added_at, source`. Source is `seed` | `candidate-accept` | `manual`.
 - **`competitor_models`** — `competitor_name, name, aliases` (JSON array). Cascades on competitor delete.
+- **`brand_candidates`** — `name, first_seen, last_seen, sighting_count, reviewed, decision, accepted_at, notes`. Auto-populated when `appendRun` inserts `known=0` brands. `decision` is `NULL` | `'accepted'` | `'rejected'`.
 
 ## competitors.json
 

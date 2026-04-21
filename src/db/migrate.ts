@@ -48,6 +48,18 @@ CREATE TABLE IF NOT EXISTS competitor_models (
   aliases         TEXT NOT NULL DEFAULT '[]',
   PRIMARY KEY (competitor_name, name)
 );
+
+CREATE TABLE IF NOT EXISTS brand_candidates (
+  name           TEXT PRIMARY KEY,
+  first_seen     TEXT NOT NULL,
+  last_seen      TEXT NOT NULL,
+  sighting_count INTEGER NOT NULL DEFAULT 1,
+  reviewed       INTEGER NOT NULL DEFAULT 0,
+  decision       TEXT,
+  accepted_at    TEXT,
+  notes          TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_brand_candidates_pending ON brand_candidates(reviewed, last_seen);
 `;
 
 export function migrate(): void {

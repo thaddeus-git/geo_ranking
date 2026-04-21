@@ -1,4 +1,5 @@
 import { getDb } from './connection.ts';
+import { upsertCandidate } from './candidates.ts';
 
 export interface BrandRow {
   rank: number;
@@ -63,6 +64,7 @@ export function appendRun(rec: RunRecord): number {
     );
     for (const b of r.brands) {
       stmt.run(runId, b.rank, b.name, b.known ? 1 : 0, b.matched_competitor ?? null);
+      if (!b.known) upsertCandidate(b.name, r.date);
     }
     return runId;
   });
