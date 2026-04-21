@@ -20,9 +20,10 @@ The agent reads active keywords from the DB, queries Doubao, extracts brands via
 
 ## Prerequisites
 
-- **Chrome with CDP:**
+- **Chrome or Edge with CDP:**
   ```bash
   open -a "Google Chrome" --args --remote-debugging-port=9222
+  # or: open -a "Microsoft Edge" --args --remote-debugging-port=9222
   ```
   Then log into doubao.com in that window.
 - **Node 18+** and `npm install` complete (handled by `scripts/init.sh`).

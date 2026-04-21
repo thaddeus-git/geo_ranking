@@ -63,8 +63,9 @@ def get_pages():
     try:
         return json.loads(urllib.request.urlopen(f'http://localhost:{port}/json/list', timeout=5).read())
     except Exception:
-        fail(f"CDP not reachable on port {port}. Launch Chrome with CDP enabled:\n"
+        fail(f"CDP not reachable on port {port}. Launch Chrome or Edge with CDP enabled:\n"
              f"  open -a 'Google Chrome' --args --remote-debugging-port={port}\n"
+             f"  open -a 'Microsoft Edge' --args --remote-debugging-port={port}\n"
              f"Then open doubao.com and log in.", 1)
 
 def find_tab_ws(tab_id, pages):
@@ -94,11 +95,12 @@ async def main():
     else:
         if stored_id:
             log(f"tab: [{TAB_LABEL}] id={stored_id[:8]}… gone (browser restarted?), creating new")
-        # Create a new tab; Chrome names it after the URL until doubao loads its own title
+        # Create a new tab; PUT required by Chromium 85+ (Chrome and Edge)
         try:
-            new_tab = json.loads(urllib.request.urlopen(
-                f'http://localhost:{port}/json/new?https://www.doubao.com/chat/', timeout=5
-            ).read())
+            req = urllib.request.Request(
+                f'http://localhost:{port}/json/new?https://www.doubao.com/chat/',
+                method='PUT')
+            new_tab = json.loads(urllib.request.urlopen(req, timeout=5).read())
         except Exception as e:
             fail(f"could not create new tab: {e}", 1)
         save_tab_id(new_tab['id'])
