@@ -1,5 +1,6 @@
 import { getDb } from './connection.ts';
 import { upsertCandidate } from './candidates.ts';
+import { localToday } from './date.ts';
 
 export interface BrandRow {
   rank: number;
@@ -32,7 +33,7 @@ export interface RunRow {
 }
 
 export function hasRunToday(keyword: string, platform = 'doubao'): boolean {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const row = getDb()
     .prepare('SELECT 1 FROM runs WHERE date = ? AND keyword = ? AND platform = ? LIMIT 1')
     .get(today, keyword, platform);
@@ -109,7 +110,7 @@ export function brandHistory(name: string): Array<{ date: string; keyword: strin
 
 export function counts(): { runs: number; today: number; keywords: number; brands: number } {
   const db = getDb();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const total = db.prepare('SELECT COUNT(*) AS n FROM runs').get() as { n: number };
   const todayN = db.prepare('SELECT COUNT(*) AS n FROM runs WHERE date = ?').get(today) as { n: number };
   const kw = db.prepare('SELECT COUNT(DISTINCT keyword) AS n FROM runs').get() as { n: number };

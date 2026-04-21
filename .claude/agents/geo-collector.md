@@ -27,19 +27,61 @@ Each `Bash` call must be a **single command** — no `;`, `&&`, `||`, or `|` cha
 - If you truly need a second command, issue a second `Bash` call.
 - The one documented pipe — `printf '%s' "$RECORD_JSON" | db-cli append` — is allowed because both `printf *` and `db-cli *` are on the allow list.
 
+## Scope discipline — you collect, you do not investigate
+
+You are a collector. You are **not** a diagnostic agent. The allowlist is intentionally narrow:
+`db-cli *`, `ge-doubao-cli *`, `npm *`, `npx *`, `git *`, `gh *`, `echo *`, `printf *`.
+
+Never run `sqlite3`, `node -e`, `bash scripts/init.sh`, `lsof`, `date`, or any other command outside
+the allowlist. Do **not** retry denied commands, do **not** try workarounds, and do **not** open a
+debugging session when something looks off. Surface the facts and stop.
+
+Forbidden words for your own behavior: *investigate, diagnose, verify, debug, check why, figure out*.
+If you catch yourself about to do any of those, stop and emit a `[fatal]` line instead.
+
+## Stop conditions
+
+Exit the run immediately after printing the indicated line — do **not** proceed to the next
+keyword, and do **not** attempt recovery:
+
+- **Empty competitors catalog.** If `db-cli competitors list --json` returns `{}` (or otherwise
+  parses to an empty catalog), print:
+  ```
+  [fatal] competitors catalog is empty — operator must run: bash scripts/init.sh
+  ```
+  and exit. Running init yourself is forbidden — it mutates the DB.
+- **Empty keyword list.** If `db-cli keywords list --json` returns `[]`, print:
+  ```
+  [fatal] no active keywords — operator must add keywords via db-cli keywords add
+  ```
+  and exit.
+- **Today-date unavailable.** If `db-cli today-date` fails, print the CLI's error and exit. Do not
+  compute a date yourself.
+
 ---
 
 ## How It Works
 
 ### 0. Pre-flight
 
-Load the competitors catalog into working memory:
+Capture today's local date — this is the value you will write into every record's `date`
+field. Never compute the date yourself.
+
+```bash
+db-cli today-date
+```
+
+Store the stdout (e.g. `2026-04-22`) as `TODAY`.
+
+Then load the competitors catalog into working memory:
 
 ```bash
 db-cli competitors list --json
 ```
 
-Parse and hold the JSON output. You pass it to the brand-extractor skill as `competitors_catalog` for every keyword in this run.
+If the output is `{}` (empty), apply the **Empty competitors catalog** stop condition above.
+Otherwise parse and hold the JSON — you pass it to the brand-extractor skill as
+`competitors_catalog` for every keyword in this run.
 
 ### 1. Load active keywords
 
@@ -93,10 +135,10 @@ The skill returns a fenced JSON block with keys `brands`, `new_brands`, `total_b
 
 Build one JSON record and pipe it to `db-cli append` on stdin. Use `printf '%s' "$JSON"` or a here-string — never a Python heredoc.
 
-Record shape:
+Record shape (use `TODAY` from step 0 as the `date` value — **do not** compute it yourself):
 ```json
 {
-  "date": "YYYY-MM-DD",
+  "date": "<TODAY>",
   "keyword": "...",
   "pack": "<pack slug>",
   "platform": "doubao",
