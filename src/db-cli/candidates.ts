@@ -72,7 +72,11 @@ function cmdShow(name: string | undefined): void {
 function parseModelAliases(argv: string[]): Array<{ name: string; aliases: string[] }> {
   const result: Array<{ name: string; aliases: string[] }> = [];
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--model' && argv[i + 1] && !argv[i + 1]!.startsWith('--')) {
+    if (argv[i] === '--model') {
+      if (!argv[i + 1] || argv[i + 1]!.startsWith('--')) {
+        console.error('warning: --model requires a name argument; skipping');
+        continue;
+      }
       const modelName = argv[i + 1]!;
       i++;
       let aliases: string[] = [];
@@ -95,7 +99,7 @@ function cmdAccept(argv: string[]): void {
   const models = parseModelAliases(argv.slice(1));
   const cand = getCandidate(name);
   if (!cand) { console.error(`no candidate: ${name}`); process.exit(1); }
-  if (cand.reviewed) { console.log(`already reviewed: ${name} (${cand.decision})`); return; }
+  if (cand.reviewed) { console.error(`already reviewed: ${name} (${cand.decision})`); process.exit(1); }
   acceptCandidate(name, models);
   console.log(`accepted: ${name}`);
   if (models.length) console.log(`  models: ${models.map((m) => m.name).join(', ')}`);
@@ -109,7 +113,7 @@ function cmdReject(argv: string[], parse: ParseFn): void {
   if (!reason) { console.error('candidates reject: --reason "..." required'); process.exit(2); }
   const cand = getCandidate(name);
   if (!cand) { console.error(`no candidate: ${name}`); process.exit(1); }
-  if (cand.reviewed) { console.log(`already reviewed: ${name} (${cand.decision})`); return; }
+  if (cand.reviewed) { console.error(`already reviewed: ${name} (${cand.decision})`); process.exit(1); }
   rejectCandidate(name, reason);
   console.log(`rejected: ${name}`);
 }

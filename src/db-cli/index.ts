@@ -41,7 +41,7 @@ Candidates:
   candidates list [--status pending|accepted|rejected|reviewed] [--pack <name>] [--json]
   candidates pending
   candidates show <name>
-  candidates accept <name> [--model NAME [--aliases a,b]]
+  candidates accept <name> [--model NAME [--aliases a,b]]...
   candidates reject <name> --reason "..."
 
 Other:
