@@ -21,23 +21,15 @@ export interface CandidateSource {
 
 // Called from within appendRun's transaction — no inner tx needed.
 export function upsertCandidate(name: string, date: string): void {
-  const db = getDb();
-  const existing = db
-    .prepare('SELECT reviewed FROM brand_candidates WHERE name = ?')
-    .get(name) as { reviewed: number } | undefined;
-  if (!existing) {
-    db.prepare(
-      'INSERT INTO brand_candidates (name, first_seen, last_seen, sighting_count) VALUES (?, ?, ?, 1)',
-    ).run(name, date, date);
-  } else if (existing.reviewed === 0) {
-    db.prepare(
-      `UPDATE brand_candidates
-       SET last_seen = CASE WHEN last_seen < ? THEN ? ELSE last_seen END,
-           sighting_count = sighting_count + 1
-       WHERE name = ?`,
-    ).run(date, date, name);
-  }
-  // reviewed=1: ops already decided, do nothing
+  getDb()
+    .prepare(
+      `INSERT INTO brand_candidates (name, first_seen, last_seen, sighting_count)
+       VALUES (?, ?, ?, 1)
+       ON CONFLICT(name) DO UPDATE SET
+         last_seen      = CASE WHEN reviewed = 0 AND last_seen < excluded.last_seen THEN excluded.last_seen ELSE last_seen END,
+         sighting_count = CASE WHEN reviewed = 0 THEN sighting_count + 1 ELSE sighting_count END`,
+    )
+    .run(name, date, date);
 }
 
 export function listCandidates(opts: {
