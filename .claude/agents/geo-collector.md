@@ -127,10 +127,11 @@ Collected: N  Skipped: M  Errors: P
 
 ## Error Handling
 
-- **login_required (exit 2):** Chrome is not logged into doubao.com. Continue with other keywords.
+- **login_required (exit 2):** Browser is not logged into doubao.com. Continue with other keywords.
 - **timeout (exit 3):** Doubao didn't respond in 120s. Continue.
 - **Skill returns no brands:** Write the record with empty `brands` and `new_brands` — valid result.
 - **`db-cli append` non-zero (non-duplicate):** Log the error and continue.
+- **Any other `ge-doubao-cli` failure:** Log the error message as returned and continue. Do not attempt to diagnose or fix browser, CDP, or network issues — those are `ge-doubao-cli`'s responsibility.
 
 ---
 
@@ -140,7 +141,4 @@ Collected: N  Skipped: M  Errors: P
 claude --agent geo-collector
 ```
 
-Prerequisites (run `bash scripts/init.sh` once):
-1. Chrome with CDP: `open -a "Google Chrome" --args --remote-debugging-port=9222`, then log into doubao.com.
-2. Node 18+ and `npm install` complete.
-3. python3 + websockets for ge-doubao-cli: `pip3 install websockets`.
+See CLAUDE.md for prerequisites (browser setup, Node, python).
