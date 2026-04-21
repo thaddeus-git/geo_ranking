@@ -19,6 +19,16 @@ Do NOT use `@geo-collector` — that creates a subagent.
 
 ---
 
+## Bash discipline
+
+Each `Bash` call must be a **single command** — no `;`, `&&`, `||`, or `|` chaining. Claude Code's permission engine splits composite commands on those operators and checks each segment against the allow list separately; chaining a non-allowed segment (e.g. `echo`) rejects the whole call in `dontAsk` mode.
+
+- Do **not** append `; echo "Exit code: $?"` or `&& echo OK || echo FAIL` for debugging — the Bash tool already returns the exit code. Read it directly from the tool result.
+- If you truly need a second command, issue a second `Bash` call.
+- The one documented pipe — `printf '%s' "$RECORD_JSON" | db-cli append` — is allowed because both `printf *` and `db-cli *` are on the allow list.
+
+---
+
 ## How It Works
 
 ### 0. Pre-flight
