@@ -100,8 +100,9 @@ function cmdAccept(argv: string[]): void {
   const cand = getCandidate(name);
   if (!cand) { console.error(`no candidate: ${name}`); process.exit(1); }
   if (cand.reviewed) { console.error(`already reviewed: ${name} (${cand.decision})`); process.exit(1); }
-  acceptCandidate(name, models);
+  const { competitorInserted } = acceptCandidate(name, models);
   console.log(`accepted: ${name}`);
+  if (!competitorInserted) console.log(`  note: already in competitors catalog (source unchanged)`);
   if (models.length) console.log(`  models: ${models.map((m) => m.name).join(', ')}`);
 }
 

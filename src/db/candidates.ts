@@ -86,10 +86,11 @@ export function sourcesForCandidate(name: string): CandidateSource[] {
 export function acceptCandidate(
   name: string,
   models: Array<{ name: string; aliases: string[] }>,
-): void {
+): { competitorInserted: boolean } {
   const db = getDb();
+  let competitorInserted = false;
   const tx = db.transaction(() => {
-    insertCompetitor(name, 'candidate-accept');
+    competitorInserted = insertCompetitor(name, 'candidate-accept');
     for (const m of models) {
       insertCompetitorModel(name, m.name, m.aliases);
     }
@@ -100,6 +101,7 @@ export function acceptCandidate(
     ).run(name);
   });
   tx();
+  return { competitorInserted };
 }
 
 export function rejectCandidate(name: string, reason: string): void {
