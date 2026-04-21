@@ -34,11 +34,12 @@ The agent reads active keywords from the DB, queries Doubao, extracts brands via
 ```
 .claude/agents/geo-collector.md   — orchestrator loop
 .claude/skills/brand-extractor/   — LLM brand extraction + new-entrant detection
-bin/db-cli                        — Node/TS CLI: keywords + runs + brands (SQLite)
+bin/db-cli                        — Node/TS CLI: keywords + runs + brands + competitors (SQLite)
 bin/ge-doubao-cli                 — bash+python3 CDP scraper for doubao.com
 src/db/                           — schema, migrations, prepared-statement helpers
 src/db-cli/                       — one file per subcommand
-competitors.json                  — human-curated catalog of known robot brands
+competitors.json                  — frozen seed; imported once into DB by scripts/init.sh
+scripts/import-competitors.ts     — one-time importer: competitors.json → DB (idempotent)
 data/geo_results.db               — gitignored; all state lives here
 scripts/init.sh                   — one-time setup
 .claude/hooks/prepend-bin-path.sh — SessionStart: adds ./bin to PATH
@@ -67,19 +68,28 @@ db-cli list --pack hospital-guide-robot
 db-cli brand-history "猎户星空"           # every time this brand appeared
 ```
 
+## Adding / managing competitors
+
+The competitors catalog lives in the `competitors` and `competitor_models` tables (seeded from `competitors.json` on first `bash scripts/init.sh`).
+
+```bash
+db-cli competitors list               # tabular view
+db-cli competitors list --json        # same JSON shape as the former competitors.json
+db-cli competitors show "穿山甲机器人" # name, source, added_at, models
+db-cli competitors add "新品牌"        # insert manually
+db-cli competitors add-model "新品牌" --model "X1" --aliases "alias1,alias2"
+```
+
 ## Schema
 
-`data/geo_results.db` — SQLite, three tables:
+`data/geo_results.db` — SQLite, five tables:
 
 - **`keywords`** — `id, keyword, pack, active, created_at`. `UNIQUE(keyword, pack)`.
 - **`runs`** — `id, date, keyword, pack, platform, response_text, timestamp, total_brands, new_brands`. `UNIQUE(date, keyword, platform)` enforces idempotency.
 - **`brands`** — `run_id, rank, name, known, matched_competitor`. Cascades on run delete.
+- **`competitors`** — `name, added_at, source`. Source is `seed` | `candidate-accept` | `manual`.
+- **`competitor_models`** — `competitor_name, name, aliases` (JSON array). Cascades on competitor delete.
 
 ## competitors.json
 
-Human-maintained catalog of known service robot brands:
-```json
-{ "品牌名": { "models": [{ "name": "...", "aliases": ["..."] }] } }
-```
-
-Do **not** modify it — it is maintained externally. The brand-extractor skill uses it to distinguish known vs. new competitors. Brands not in this file are surfaced in each run's `new_brands` field.
+Frozen seed file. Imported once into the DB by `scripts/init.sh` via `scripts/import-competitors.ts`. Do **not** use it at runtime — `db-cli competitors list --json` is now the authoritative source. The file is kept in the repo for git-visible provenance of the initial catalog.

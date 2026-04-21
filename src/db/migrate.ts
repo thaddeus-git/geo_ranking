@@ -35,6 +35,19 @@ CREATE TABLE IF NOT EXISTS brands (
   PRIMARY KEY (run_id, rank)
 );
 CREATE INDEX IF NOT EXISTS idx_brands_name ON brands(name);
+
+CREATE TABLE IF NOT EXISTS competitors (
+  name      TEXT PRIMARY KEY,
+  added_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  source    TEXT NOT NULL DEFAULT 'seed'
+);
+
+CREATE TABLE IF NOT EXISTS competitor_models (
+  competitor_name TEXT NOT NULL REFERENCES competitors(name) ON DELETE CASCADE,
+  name            TEXT NOT NULL,
+  aliases         TEXT NOT NULL DEFAULT '[]',
+  PRIMARY KEY (competitor_name, name)
+);
 `;
 
 export function migrate(): void {
