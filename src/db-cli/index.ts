@@ -8,6 +8,7 @@ import { cmdList } from './list.ts';
 import { cmdToday } from './today.ts';
 import { cmdBrandHistory } from './brand-history.ts';
 import { cmdKeywords } from './keywords.ts';
+import { cmdCompetitors } from './competitors.ts';
 
 function help(): void {
   console.log(`db-cli — geo_ranking database
@@ -28,6 +29,12 @@ Keywords:
   keywords add --keyword "<text>" --pack <name>
   keywords activate <id>
   keywords deactivate <id>
+
+Competitors:
+  competitors list [--json]
+  competitors show <name>
+  competitors add <name>
+  competitors add-model <name> --model <name> [--aliases a,b,c]
 
 Other:
   init                             Create schema (idempotent)
@@ -98,6 +105,9 @@ async function main(): Promise<void> {
       }
       case 'keywords':
         await cmdKeywords(rest, parseFlags);
+        break;
+      case 'competitors':
+        await cmdCompetitors(rest, parseFlags);
         break;
       default:
         console.error(`Unknown command: ${command}`);

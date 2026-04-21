@@ -53,6 +53,17 @@ else
   fail "db-cli init failed"; exit 1
 fi
 
+# 4b. Competitors catalog
+echo ""
+echo "4b. Competitors catalog"
+COMP_COUNT=$(./bin/db-cli competitors list --json | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>console.log(Object.keys(JSON.parse(s)).length))")
+if [ "$COMP_COUNT" -eq 0 ]; then
+  node --import tsx scripts/import-competitors.ts
+  ok "competitors catalog imported from competitors.json"
+else
+  ok "competitors catalog already in DB: $COMP_COUNT brands"
+fi
+
 # 5. Keywords
 echo ""
 echo "5. Keywords"

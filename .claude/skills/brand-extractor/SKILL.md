@@ -13,11 +13,11 @@ The caller passes all three fields in the invocation context:
 
 - `keyword` — the prompt string sent to Doubao
 - `response_text` — full Doubao AI response text
-- `competitors_json` — full JSON content of competitors.json
+- `competitors_catalog` — JSON output of `db-cli competitors list --json` (same shape as the former competitors.json)
 
 ## Process
 
-1. **Build lookup set** from `competitors_json`:
+1. **Build lookup set** from `competitors_catalog`:
    - All top-level brand keys (e.g., `穿山甲机器人`, `优必选科技`)
    - All model `name` values under each brand
    - All `aliases` strings under each model

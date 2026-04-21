@@ -23,7 +23,13 @@ Do NOT use `@geo-collector` — that creates a subagent.
 
 ### 0. Pre-flight
 
-Read `competitors.json` into working memory. You pass its full content to the brand-extractor skill for every keyword in this run.
+Load the competitors catalog into working memory:
+
+```bash
+db-cli competitors list --json
+```
+
+Parse and hold the JSON output. You pass it to the brand-extractor skill as `competitors_catalog` for every keyword in this run.
 
 ### 1. Load active keywords
 
@@ -68,7 +74,7 @@ Invoke the `brand-extractor` skill with:
 ```
 keyword: <keyword>
 response_text: <response_text from ge-doubao-cli>
-competitors_json: <full content of competitors.json>
+competitors_catalog: <output of db-cli competitors list --json from step 0>
 ```
 
 The skill returns a fenced JSON block with keys `brands`, `new_brands`, `total_brands`. Parse it.
