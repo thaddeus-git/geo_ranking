@@ -99,7 +99,7 @@ Record shape:
 
 Example invocation:
 ```bash
-echo "$RECORD_JSON" | db-cli append
+printf '%s' "$RECORD_JSON" | db-cli append
 ```
 
 `db-cli append` returns exit 3 on duplicate (date, keyword, platform). Treat that as `[skip]`, not an error.
