@@ -1,27 +1,27 @@
 import { getDb } from './connection.ts';
 
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS keywords (
+CREATE TABLE IF NOT EXISTS queries (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  keyword     TEXT    NOT NULL,
+  query       TEXT    NOT NULL,
   pack        TEXT    NOT NULL,
   active      INTEGER NOT NULL DEFAULT 1,
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
-  UNIQUE(keyword, pack)
+  UNIQUE(query, pack)
 );
-CREATE INDEX IF NOT EXISTS idx_keywords_active_pack ON keywords(active, pack);
+CREATE INDEX IF NOT EXISTS idx_queries_active_pack ON queries(active, pack);
 
 CREATE TABLE IF NOT EXISTS runs (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   date          TEXT    NOT NULL,
-  keyword       TEXT    NOT NULL,
+  query         TEXT    NOT NULL,
   pack          TEXT    NOT NULL,
   platform      TEXT    NOT NULL DEFAULT 'doubao',
   response_text TEXT    NOT NULL,
   timestamp     TEXT    NOT NULL,
   total_brands  INTEGER NOT NULL,
   new_brands    TEXT    NOT NULL DEFAULT '[]',
-  UNIQUE(date, keyword, platform)
+  UNIQUE(date, query, platform)
 );
 CREATE INDEX IF NOT EXISTS idx_runs_date ON runs(date);
 CREATE INDEX IF NOT EXISTS idx_runs_pack ON runs(pack);
@@ -70,5 +70,23 @@ export function migrate(): void {
     getDb().exec("ALTER TABLE competitors ADD COLUMN aliases TEXT NOT NULL DEFAULT '[]'");
   } catch {
     // Column already exists — no-op.
+  }
+  // Rename keyword→query in keywords table (must happen before table rename).
+  try {
+    getDb().exec('ALTER TABLE keywords RENAME COLUMN keyword TO query');
+  } catch {
+    // Already renamed — no-op.
+  }
+  // Rename keywords table → queries.
+  try {
+    getDb().exec('ALTER TABLE keywords RENAME TO queries');
+  } catch {
+    // Already renamed — no-op.
+  }
+  // Rename keyword column in runs table.
+  try {
+    getDb().exec('ALTER TABLE runs RENAME COLUMN keyword TO query');
+  } catch {
+    // Already renamed — no-op.
   }
 }
