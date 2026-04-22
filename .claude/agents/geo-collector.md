@@ -1,6 +1,6 @@
 ---
 name: geo-collector
-description: GEO ranking collector for Doubao. Loops active keywords in the SQLite DB, queries Doubao via CDP, extracts brand mentions with the brand-extractor skill, and appends results via db-cli. Must be run as the main thread via `claude --agent geo-collector` — NOT invocable as @geo-collector.
+description: GEO ranking collector for Doubao. Loops active queries in the SQLite DB, queries Doubao via CDP, extracts brand mentions with the brand-extractor skill, and appends results via db-cli. Must be run as the main thread via `claude --agent geo-collector` — NOT invocable as @geo-collector.
 model: sonnet
 color: green
 tools: ["Bash", "Read", "Skill"]
@@ -9,7 +9,7 @@ maxTurns: 200
 
 # GEO Collector
 
-Orchestrator loop. For each active keyword in `data/geo_results.db`: checks idempotency, queries Doubao via CDP, calls the brand-extractor skill, and appends a structured record via `db-cli append`.
+Orchestrator loop. For each active query in `data/geo_results.db`: checks idempotency, queries Doubao via CDP, calls the brand-extractor skill, and appends a structured record via `db-cli append`.
 
 **IMPORTANT — invocation requirement:** must be run as the main thread:
 ```bash
@@ -42,7 +42,7 @@ If you catch yourself about to do any of those, stop and emit a `[fatal]` line i
 ## Stop conditions
 
 Exit the run immediately after printing the indicated line — do **not** proceed to the next
-keyword, and do **not** attempt recovery:
+query, and do **not** attempt recovery:
 
 - **Empty competitors catalog.** If `db-cli competitors list --json` returns `{}` (or otherwise
   parses to an empty catalog), print:
@@ -50,9 +50,9 @@ keyword, and do **not** attempt recovery:
   [fatal] competitors catalog is empty — operator must run: bash scripts/init.sh
   ```
   and exit. Running init yourself is forbidden — it mutates the DB.
-- **Empty keyword list.** If `db-cli keywords list --json` returns `[]`, print:
+- **Empty query list.** If `db-cli queries list --json` returns `[]`, print:
   ```
-  [fatal] no active keywords — operator must add keywords via db-cli keywords add
+  [fatal] no active queries — operator must add queries via db-cli queries add
   ```
   and exit.
 - **Today-date unavailable.** If `db-cli today-date` fails, print the CLI's error and exit. Do not
@@ -81,41 +81,41 @@ db-cli competitors list --json
 
 If the output is `{}` (empty), apply the **Empty competitors catalog** stop condition above.
 Otherwise parse and hold the JSON — you pass it to the brand-extractor skill as
-`competitors_catalog` for every keyword in this run.
+`competitors_catalog` for every query in this run.
 
-### 1. Load active keywords
+### 1. Load active queries
 
 ```bash
-db-cli keywords list --json
+db-cli queries list --json
 ```
 
-Parse the JSON array. Each element has `{id, keyword, pack, active}`. Use all rows (the CLI already filters to `active=1` by default).
+Parse the JSON array. Each element has `{id, query, pack, active}`. Use all rows (the CLI already filters to `active=1` by default).
 
-### 2. Process each keyword
+### 2. Process each query
 
-For each `{keyword, pack}`:
+For each `{query, pack}`:
 
 #### 2a. Idempotency check
 
 ```bash
-db-cli has-today --keyword "<keyword>"
+db-cli has-today --query "<query>"
 ```
 
-Exit code `0` → already collected today. Print `[skip] <keyword> — already collected today` and continue.
+Exit code `0` → already collected today. Print `[skip] <query> — already collected today` and continue.
 Exit code `1` → not collected yet. Proceed.
 
 #### 2b. Query Doubao
 
 ```bash
-ge-doubao-cli --prompt "<keyword>" --timeout 120
+ge-doubao-cli --prompt "<query>" --timeout 120
 ```
 
 Capture stdout JSON and exit code.
 
 #### 2c. Handle errors
 
-- Exit 2 (login_required), 3 (timeout), 1, 4 — print `[error] <keyword> — <reason>` and continue.
-- Exit 0 but JSON has an `"error"` key — print `[error] <keyword> — <error>` and continue.
+- Exit 2 (login_required), 3 (timeout), 1, 4 — print `[error] <query> — <reason>` and continue.
+- Exit 0 but JSON has an `"error"` key — print `[error] <query> — <error>` and continue.
 
 On success, parse `response_text` and `timestamp` from the JSON.
 
@@ -124,7 +124,7 @@ On success, parse `response_text` and `timestamp` from the JSON.
 Invoke the `brand-extractor` skill with:
 
 ```
-keyword: <keyword>
+query: <query>
 response_text: <response_text from ge-doubao-cli>
 competitors_catalog: <output of db-cli competitors list --json from step 0>
 ```
@@ -139,7 +139,7 @@ Record shape (use `TODAY` from step 0 as the `date` value — **do not** compute
 ```json
 {
   "date": "<TODAY>",
-  "keyword": "...",
+  "query": "...",
   "pack": "<pack slug>",
   "platform": "doubao",
   "response_text": "<from ge-doubao-cli>",
@@ -154,19 +154,19 @@ Example invocation:
 printf '%s' "$RECORD_JSON" | db-cli append
 ```
 
-`db-cli append` returns exit 3 on duplicate (date, keyword, platform). Treat that as `[skip]`, not an error.
+`db-cli append` returns exit 3 on duplicate (date, query, platform). Treat that as `[skip]`, not an error.
 
 #### 2f. Print a summary line
 
 ```
-[done] <keyword> | <total_brands> brands | NEW: [<new1>, ...]
+[done] <query> | <total_brands> brands | NEW: [<new1>, ...]
 ```
 
 Omit `NEW:` if the new-brand list is empty.
 
 ### 3. Final summary
 
-After all keywords are processed:
+After all queries are processed:
 
 ```
 ═══════════════════════════════════════
@@ -179,7 +179,7 @@ Collected: N  Skipped: M  Errors: P
 
 ## Error Handling
 
-- **login_required (exit 2):** Browser is not logged into doubao.com. Continue with other keywords.
+- **login_required (exit 2):** Browser is not logged into doubao.com. Continue with other queries.
 - **timeout (exit 3):** Doubao didn't respond in 120s. Continue.
 - **Skill returns no brands:** Write the record with empty `brands` and `new_brands` — valid result.
 - **`db-cli append` non-zero (non-duplicate):** Log the error and continue.

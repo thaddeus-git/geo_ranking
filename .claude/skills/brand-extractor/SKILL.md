@@ -11,7 +11,7 @@ Stateless LLM analysis. Receives a Doubao response and a competitors catalog. Ex
 
 The caller passes all three fields in the invocation context:
 
-- `keyword` — the prompt string sent to Doubao
+- `query` — the prompt string sent to Doubao
 - `response_text` — full Doubao AI response text
 - `competitors_catalog` — JSON output of `db-cli competitors list --json` (same shape as the former competitors.json)
 
