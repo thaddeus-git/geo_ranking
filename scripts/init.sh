@@ -67,6 +67,9 @@ fi
 # 5. Queries
 echo ""
 echo "5. Queries"
+if [ -d data/seeds ]; then
+  node --import tsx scripts/seed-queries.ts
+fi
 ACTIVE=$(./bin/db-cli queries list --json | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>console.log(JSON.parse(s).length))")
 ok "active queries in DB: $ACTIVE"
 
