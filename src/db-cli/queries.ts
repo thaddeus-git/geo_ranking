@@ -1,12 +1,12 @@
-import { listKeywords, addKeyword, setActive } from '../db/keywords.ts';
+import { listQueries, addQuery, setActive } from '../db/queries.ts';
 
 type ParseFn = (argv: string[]) => { flags: Record<string, string | boolean>; positionals: string[] };
 
-export async function cmdKeywords(argv: string[], parse: ParseFn): Promise<void> {
+export async function cmdQueries(argv: string[], parse: ParseFn): Promise<void> {
   const sub = argv[0];
   const rest = argv.slice(1);
   if (!sub) {
-    console.error('keywords: subcommand required (list | add | activate | deactivate)');
+    console.error('queries: subcommand required (list | add | activate | deactivate)');
     process.exit(2);
   }
   switch (sub) {
@@ -18,20 +18,20 @@ export async function cmdKeywords(argv: string[], parse: ParseFn): Promise<void>
       return cmdSetActive(positionals[0], sub === 'activate');
     }
     default:
-      console.error(`keywords: unknown subcommand "${sub}"`);
+      console.error(`queries: unknown subcommand "${sub}"`);
       process.exit(2);
   }
 }
 
 function cmdList(flags: Record<string, string | boolean>): void {
-  const rows = listKeywords({
+  const rows = listQueries({
     includeInactive: flags['include-inactive'] === true,
     pack: typeof flags.pack === 'string' ? flags.pack : undefined,
   });
   if (flags.json) {
     console.log(JSON.stringify(rows.map((r) => ({
       id: r.id,
-      keyword: r.keyword,
+      query: r.query,
       pack: r.pack,
       active: r.active,
     }))));
@@ -39,29 +39,29 @@ function cmdList(flags: Record<string, string | boolean>): void {
   }
   for (const r of rows) {
     const flag = r.active ? '  ' : ' *';
-    console.log(`${r.id}\t${flag}\t${r.pack}\t${r.keyword}`);
+    console.log(`${r.id}\t${flag}\t${r.pack}\t${r.query}`);
   }
 }
 
 function cmdAdd(flags: Record<string, string | boolean>): void {
-  const keyword = flags.keyword;
+  const query = flags.query;
   const pack = flags.pack;
-  if (typeof keyword !== 'string' || !keyword) {
-    console.error('keywords add: --keyword "<text>" required');
+  if (typeof query !== 'string' || !query) {
+    console.error('queries add: --query "<text>" required');
     process.exit(2);
   }
   if (typeof pack !== 'string' || !pack) {
-    console.error('keywords add: --pack <name> required');
+    console.error('queries add: --pack <name> required');
     process.exit(2);
   }
-  const { inserted, id } = addKeyword(keyword, pack);
+  const { inserted, id } = addQuery(query, pack);
   if (inserted) console.log(`added id=${id}`);
   else console.log(`exists id=${id} (no change)`);
 }
 
 function cmdSetActive(idStr: string | undefined, active: boolean): void {
   if (!idStr) {
-    console.error('keywords activate/deactivate: <id> required');
+    console.error('queries activate/deactivate: <id> required');
     process.exit(2);
   }
   const id = Number(idStr);
@@ -71,7 +71,7 @@ function cmdSetActive(idStr: string | undefined, active: boolean): void {
   }
   const ok = setActive(id, active);
   if (!ok) {
-    console.error(`no keyword with id=${id}`);
+    console.error(`no query with id=${id}`);
     process.exit(1);
   }
   console.log(`id=${id} ${active ? 'active' : 'inactive'}`);
