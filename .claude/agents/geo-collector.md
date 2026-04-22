@@ -3,7 +3,7 @@ name: geo-collector
 description: GEO ranking collector for Doubao. Loops active queries in the SQLite DB, queries Doubao via CDP, extracts brand mentions with the brand-extractor skill, and appends results via db-cli. Must be run as the main thread via `claude --agent geo-collector` — NOT invocable as @geo-collector.
 model: sonnet
 color: green
-tools: ["Bash", "Read", "Skill"]
+tools: ["Bash", "Read", "Write", "Skill"]
 maxTurns: 200
 ---
 
@@ -21,11 +21,13 @@ Do NOT use `@geo-collector` — that creates a subagent.
 
 ## Bash discipline
 
-Each `Bash` call must be a **single command** — no `;`, `&&`, `||`, or `|` chaining. Claude Code's permission engine splits composite commands on those operators and checks each segment against the allow list separately; chaining a non-allowed segment (e.g. `echo`) rejects the whole call in `dontAsk` mode.
+Each `Bash` call must be a **single command** — no `;`, `&&`, `||`, or `|` chaining.
+
+Claude Code's permission engine checks the **full command string** against each allow pattern. Wildcards (`*`) do **not** span pipe or chaining operators (`|`, `&&`, `||`, `;`). A piped command like `printf ... | db-cli append` is never matched by `"Bash(printf *)"` or `"Bash(db-cli *)"` — the pattern boundary stops at `|`. Any such call is blocked in `dontAsk` mode regardless of what's on either side of the pipe.
 
 - Do **not** append `; echo "Exit code: $?"` or `&& echo OK || echo FAIL` for debugging — the Bash tool already returns the exit code. Read it directly from the tool result.
 - If you truly need a second command, issue a second `Bash` call.
-- The one documented pipe — `printf '%s' "$RECORD_JSON" | db-cli append` — is allowed because both `printf *` and `db-cli *` are on the allow list.
+- To pass large payloads (e.g. a JSON record) to a CLI tool, use the **Write tool** to write the payload to a file, then redirect with `< file` in the `Bash` call — that stays within the `db-cli *` pattern.
 
 ## Scope discipline — you collect, you do not investigate
 
@@ -135,7 +137,8 @@ The skill returns a fenced JSON block with keys `brands`, `new_brands`, `total_b
 
 #### 1e. Append to the database
 
-Build one JSON record and pipe it to `db-cli append` on stdin. Use `printf '%s' "$JSON"` or a here-string — never a Python heredoc.
+Build the JSON record in your context, then write it to disk and pass it to `db-cli append` via
+stdin redirect — **never via a pipe**, which is blocked by the permission engine.
 
 Record shape (use `TODAY` from step 0 as the `date` value — **do not** compute it yourself):
 ```json
@@ -156,10 +159,17 @@ Record shape (use `TODAY` from step 0 as the `date` value — **do not** compute
 Do **not** populate `links` or `related_queries` — those are parsed from `raw_html` in a
 separate offline pass.
 
-Example invocation:
-```bash
-printf '%s' "$RECORD_JSON" | db-cli append
-```
+**Two-step invocation:**
+
+1. Use the **Write tool** to save the complete JSON to `/tmp/geo_record.json`.
+   The Write tool handles arbitrary content (Chinese text, raw HTML, single quotes) without any
+   shell escaping.
+
+2. Redirect the file into `db-cli append`:
+   ```bash
+   db-cli append < /tmp/geo_record.json
+   ```
+   This is a single command starting with `db-cli`, matching `"Bash(db-cli *)"`.
 
 `db-cli append` returns exit 3 on duplicate (date, query, platform). Treat that as `[skip]`, not an error.
 
