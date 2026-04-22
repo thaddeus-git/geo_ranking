@@ -197,16 +197,37 @@ async def main():
             if isinstance(rlen, (int, float)) and rlen > 10:
                 break
 
-        # Extract response
-        response = await ev(ctx, '''(function(){
+        # Extract response + enclosing answer card HTML.
+        # We walk up from the markdown body to the nearest "message"/"card"
+        # ancestor so sibling citation blocks and related-query chips are
+        # captured alongside. Selectors for those are unknown today — storing
+        # raw HTML lets a later pass learn them without re-scraping.
+        extracted = await ev(ctx, '''(function(){
             var m = document.querySelectorAll("[class*='flow-markdown-body']");
-            return m.length > 0 ? m[m.length-1].textContent.trim() : "";
+            if (m.length === 0) return null;
+            var last = m[m.length - 1];
+            var card = last.closest("[class*='message']") || last.parentElement;
+            var html = card ? card.outerHTML : last.outerHTML;
+            var MAX = 200000;
+            if (html && html.length > MAX) {
+                html = html.slice(0, MAX) + "<!-- truncated -->";
+            }
+            return {
+                response_text: last.textContent.trim(),
+                raw_html: html,
+                url: location.href,
+            };
         })()''')
 
+        if not isinstance(extracted, dict):
+            fail(f"timeout — no AI response after {elapsed}s", 3)
+        response = extracted.get('response_text') or ''
         if not response or len(response) < 5:
             fail(f"timeout — no AI response after {elapsed}s", 3)
 
-        log(f"done: response_len={len(response)}")
+        raw_html = extracted.get('raw_html') or ''
+        page_url = extracted.get('url') or chat_url
+        log(f"done: response_len={len(response)} raw_html_len={len(raw_html)}")
 
         # Output JSON
         ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -214,8 +235,9 @@ async def main():
             'platform': 'doubao',
             'prompt': prompt,
             'response_text': response,
+            'raw_html': raw_html,
             'timestamp': ts,
-            'url': chat_url,
+            'url': page_url,
         }, ensure_ascii=False))
 
 asyncio.run(main())

@@ -50,11 +50,13 @@ query, and do **not** attempt recovery:
   [fatal] competitors catalog is empty — operator must run: bash scripts/init.sh
   ```
   and exit. Running init yourself is forbidden — it mutates the DB.
-- **Empty query list.** If `db-cli queries list --json` returns `[]`, print:
+- **Empty query list.** If the very first `db-cli next --json` returns `[]` *and*
+  `db-cli queries list --json` is also `[]`, print:
   ```
   [fatal] no active queries — operator must add queries via db-cli queries add
   ```
-  and exit.
+  and exit. Note: `db-cli next` returning `[]` while `queries list` is non-empty means
+  everything is fresh — that is **not** fatal, just a normal "nothing to do" exit.
 - **Today-date unavailable.** If `db-cli today-date` fails, print the CLI's error and exit. Do not
   compute a date yourself.
 
@@ -83,28 +85,27 @@ If the output is `{}` (empty), apply the **Empty competitors catalog** stop cond
 Otherwise parse and hold the JSON — you pass it to the brand-extractor skill as
 `competitors_catalog` for every query in this run.
 
-### 1. Load active queries
+### 1. Pull-based loop
+
+You do **not** load all queries up front. Instead, ask `db-cli next` for the next due query,
+process it, and repeat until `next` returns an empty array.
+
+`db-cli next` atomically hands out a stale or never-run query and claims it for 60 minutes, so
+concurrent collector runs (if any) won't double-process. A query is considered "due" when its
+most recent run is older than **7 days** (the freshness window).
+
+#### 1a. Ask for the next due query
 
 ```bash
-db-cli queries list --json
+db-cli next --limit 1 --json
 ```
 
-Parse the JSON array. Each element has `{id, query, pack, active}`. Use all rows (the CLI already filters to `active=1` by default).
+The output is a JSON array. Parse it:
 
-### 2. Process each query
+- `[]` → nothing due. Go to the final summary.
+- `[{id, query, pack, last_run_at, age_days}, ...]` → take the first element and proceed.
 
-For each `{query, pack}`:
-
-#### 2a. Idempotency check
-
-```bash
-db-cli has-today --query "<query>"
-```
-
-Exit code `0` → already collected today. Print `[skip] <query> — already collected today` and continue.
-Exit code `1` → not collected yet. Proceed.
-
-#### 2b. Query Doubao
+#### 1b. Query Doubao
 
 ```bash
 ge-doubao-cli --prompt "<query>" --timeout 120
@@ -112,14 +113,15 @@ ge-doubao-cli --prompt "<query>" --timeout 120
 
 Capture stdout JSON and exit code.
 
-#### 2c. Handle errors
+#### 1c. Handle errors
 
-- Exit 2 (login_required), 3 (timeout), 1, 4 — print `[error] <query> — <reason>` and continue.
-- Exit 0 but JSON has an `"error"` key — print `[error] <query> — <error>` and continue.
+- Exit 2 (login_required), 3 (timeout), 1, 4 — print `[error] <query> — <reason>` and
+  loop back to 1a. (The claim will expire in 60 min; we'll retry on a later run.)
+- Exit 0 but JSON has an `"error"` key — print `[error] <query> — <error>` and loop back.
 
-On success, parse `response_text` and `timestamp` from the JSON.
+On success, the scraper JSON contains `response_text`, `raw_html`, `timestamp`, `url`.
 
-#### 2d. Extract brands
+#### 1d. Extract brands
 
 Invoke the `brand-extractor` skill with:
 
@@ -131,7 +133,7 @@ competitors_catalog: <output of db-cli competitors list --json from step 0>
 
 The skill returns a fenced JSON block with keys `brands`, `new_brands`, `total_brands`. Parse it.
 
-#### 2e. Append to the database
+#### 1e. Append to the database
 
 Build one JSON record and pipe it to `db-cli append` on stdin. Use `printf '%s' "$JSON"` or a here-string — never a Python heredoc.
 
@@ -144,10 +146,15 @@ Record shape (use `TODAY` from step 0 as the `date` value — **do not** compute
   "platform": "doubao",
   "response_text": "<from ge-doubao-cli>",
   "timestamp": "<from ge-doubao-cli>",
+  "url": "<from ge-doubao-cli>",
+  "raw_html": "<from ge-doubao-cli>",
   "brands": [{"rank": 1, "name": "...", "known": true, "matched_competitor": "..."}],
   "new_brands": ["..."]
 }
 ```
+
+Do **not** populate `links` or `related_queries` — those are parsed from `raw_html` in a
+separate offline pass.
 
 Example invocation:
 ```bash
@@ -156,22 +163,22 @@ printf '%s' "$RECORD_JSON" | db-cli append
 
 `db-cli append` returns exit 3 on duplicate (date, query, platform). Treat that as `[skip]`, not an error.
 
-#### 2f. Print a summary line
+#### 1f. Print a summary line
 
 ```
 [done] <query> | <total_brands> brands | NEW: [<new1>, ...]
 ```
 
-Omit `NEW:` if the new-brand list is empty.
+Omit `NEW:` if the new-brand list is empty. Then loop back to 1a.
 
-### 3. Final summary
+### 2. Final summary
 
-After all queries are processed:
+When `db-cli next --limit 1 --json` returns `[]`, print:
 
 ```
 ═══════════════════════════════════════
 COLLECTION COMPLETE
-Collected: N  Skipped: M  Errors: P
+Collected: N  Errors: P
 ═══════════════════════════════════════
 ```
 

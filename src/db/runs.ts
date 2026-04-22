@@ -18,6 +18,10 @@ export interface RunRecord {
   timestamp: string;
   brands: BrandRow[];
   new_brands: string[];
+  raw_html?: string | null;
+  url?: string | null;
+  links?: unknown[] | null;
+  related_queries?: string[] | null;
 }
 
 export interface RunRow {
@@ -45,8 +49,10 @@ export function appendRun(rec: RunRecord): number {
   const insert = db.transaction((r: RunRecord) => {
     const info = db
       .prepare(
-        `INSERT INTO runs (date, query, pack, platform, response_text, timestamp, total_brands, new_brands)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO runs
+           (date, query, pack, platform, response_text, timestamp,
+            total_brands, new_brands, raw_html, url, links, related_queries)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         r.date,
@@ -57,6 +63,10 @@ export function appendRun(rec: RunRecord): number {
         r.timestamp,
         r.brands.length,
         JSON.stringify(r.new_brands),
+        r.raw_html ?? null,
+        r.url ?? null,
+        r.links != null ? JSON.stringify(r.links) : null,
+        r.related_queries != null ? JSON.stringify(r.related_queries) : null,
       );
     const runId = Number(info.lastInsertRowid);
     const stmt = db.prepare(

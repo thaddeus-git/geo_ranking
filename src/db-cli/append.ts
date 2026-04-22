@@ -38,6 +38,10 @@ export async function cmdAppend(): Promise<void> {
     timestamp: rec.timestamp!,
     brands: Array.isArray(rec.brands) ? rec.brands : [],
     new_brands: Array.isArray(rec.new_brands) ? rec.new_brands : [],
+    raw_html: typeof rec.raw_html === 'string' ? rec.raw_html : null,
+    url: typeof rec.url === 'string' ? rec.url : null,
+    links: Array.isArray(rec.links) ? rec.links : null,
+    related_queries: Array.isArray(rec.related_queries) ? rec.related_queries : null,
   };
   try {
     const id = appendRun(run);

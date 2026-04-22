@@ -64,7 +64,23 @@ db-cli queries deactivate 3    # soft-delete; history preserved
 db-cli queries activate 3
 ```
 
-`pack` is a free-form category slug (e.g. `exhibition-hall-robot`, `hospital-guide-robot`). Use the same `pack` for related queries so you can filter by it later.
+`pack` is a free-form category slug (e.g. `reception-robot`, `exhibition-hall-robot`, `hospital-guide-robot`). Use the same `pack` for related queries so you can filter by it later.
+
+The `reception-robot` pack (176 queries spanning 展厅 and 前台 scenarios) is auto-seeded from `data/seeds/reception-robot.tsv` via the TSV-drop mechanism above. Re-running is a no-op.
+
+## Freshness & work queue
+
+The collector uses a 7-day rolling freshness window: a query is "due" when its most recent run is older than 7 days (or it has never run). Handout is atomic — `db-cli next` claims a query for 60 minutes so concurrent runs don't double-process. Crash-recovery is built in: an expired claim is automatically re-eligible.
+
+```bash
+db-cli next --pack reception-robot --limit 1 --json       # hand out one due query (claim)
+db-cli next --pack reception-robot --limit 5 --compact    # tsv: id\tquery\tpack\tage_days
+db-cli next --pack reception-robot --limit 5 --no-claim   # peek without claiming
+db-cli has-recent --query "..." --days 7 --json           # inspect staleness without claiming
+db-cli release <id>                                       # manually clear a stuck claim
+```
+
+`db-cli next` always exits 0. An empty output/array means nothing is due.
 
 ## Running queries
 
@@ -110,8 +126,8 @@ After `accept`, the brand is in `competitors` with `source='candidate-accept'` a
 
 `data/geo_results.db` — SQLite, six tables:
 
-- **`queries`** — `id, query, pack, active, created_at`. `UNIQUE(query, pack)`.
-- **`runs`** — `id, date, query, pack, platform, response_text, timestamp, total_brands, new_brands`. `UNIQUE(date, query, platform)` enforces idempotency.
+- **`queries`** — `id, query, pack, active, created_at, claimed_at`. `UNIQUE(query, pack)`. `claimed_at` is set by `db-cli next` for 60-min atomic handoff.
+- **`runs`** — `id, date, query, pack, platform, response_text, timestamp, total_brands, new_brands, raw_html, url, links, related_queries`. `UNIQUE(date, query, platform)` enforces idempotency. `raw_html` + `url` are captured by the scraper; `links` and `related_queries` are populated by a later offline parser.
 - **`brands`** — `run_id, rank, name, known, matched_competitor`. Cascades on run delete.
 - **`competitors`** — `name, aliases, added_at, source`. `aliases` is a JSON array of brand-level alternate names (e.g. English names). Source is `seed` | `candidate-accept` | `manual`.
 - **`competitor_models`** — `competitor_name, name, aliases` (JSON array). Cascades on competitor delete.
