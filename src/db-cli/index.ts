@@ -8,7 +8,7 @@ import { cmdList } from './list.ts';
 import { cmdToday } from './today.ts';
 import { cmdTodayDate } from './today-date.ts';
 import { cmdBrandHistory } from './brand-history.ts';
-import { cmdKeywords } from './keywords.ts';
+import { cmdQueries } from './queries.ts';
 import { cmdCompetitors } from './competitors.ts';
 import { cmdCandidates } from './candidates.ts';
 
@@ -19,19 +19,19 @@ Usage:
   db-cli <command> [options]
 
 Results:
-  status                           Count of runs, today's runs, distinct keywords and brands
-  has-today --keyword "<text>"     Exit 0 if today has a run for keyword, 1 otherwise
+  status                           Count of runs, today's runs, distinct queries and brands
+  has-today --query "<text>"       Exit 0 if today has a run for query, 1 otherwise
   append                           Read JSON record from stdin and insert atomically
   list [--date YYYY-MM-DD] [--pack <name>] [--json]
   today [--json]
   today-date                       Print today's local date (YYYY-MM-DD) — matches has-today semantics
   brand-history <name> [--json]
 
-Keywords:
-  keywords list [--pack <name>] [--include-inactive] [--json]
-  keywords add --keyword "<text>" --pack <name>
-  keywords activate <id>
-  keywords deactivate <id>
+Queries:
+  queries list [--pack <name>] [--include-inactive] [--json]
+  queries add --query "<text>" --pack <name>
+  queries activate <id>
+  queries deactivate <id>
 
 Competitors:
   competitors list [--json]
@@ -116,8 +116,8 @@ async function main(): Promise<void> {
         await cmdBrandHistory(positionals[0], flags);
         break;
       }
-      case 'keywords':
-        await cmdKeywords(rest, parseFlags);
+      case 'queries':
+        await cmdQueries(rest, parseFlags);
         break;
       case 'competitors':
         await cmdCompetitors(rest, parseFlags);
