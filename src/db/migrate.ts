@@ -7,20 +7,25 @@ CREATE TABLE IF NOT EXISTS queries (
   pack        TEXT    NOT NULL,
   active      INTEGER NOT NULL DEFAULT 1,
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  claimed_at  TEXT,
   UNIQUE(query, pack)
 );
 CREATE INDEX IF NOT EXISTS idx_queries_active_pack ON queries(active, pack);
 
 CREATE TABLE IF NOT EXISTS runs (
-  id            INTEGER PRIMARY KEY AUTOINCREMENT,
-  date          TEXT    NOT NULL,
-  query         TEXT    NOT NULL,
-  pack          TEXT    NOT NULL,
-  platform      TEXT    NOT NULL DEFAULT 'doubao',
-  response_text TEXT    NOT NULL,
-  timestamp     TEXT    NOT NULL,
-  total_brands  INTEGER NOT NULL,
-  new_brands    TEXT    NOT NULL DEFAULT '[]',
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  date            TEXT    NOT NULL,
+  query           TEXT    NOT NULL,
+  pack            TEXT    NOT NULL,
+  platform        TEXT    NOT NULL DEFAULT 'doubao',
+  response_text   TEXT    NOT NULL,
+  timestamp       TEXT    NOT NULL,
+  total_brands    INTEGER NOT NULL,
+  new_brands      TEXT    NOT NULL DEFAULT '[]',
+  raw_html        TEXT,
+  url             TEXT,
+  links           TEXT,
+  related_queries TEXT,
   UNIQUE(date, query, platform)
 );
 CREATE INDEX IF NOT EXISTS idx_runs_date ON runs(date);
@@ -88,5 +93,19 @@ export function migrate(): void {
     getDb().exec('ALTER TABLE runs RENAME COLUMN keyword TO query');
   } catch {
     // Already renamed — no-op.
+  }
+  // SERP-capture columns on runs (nullable; old rows stay valid).
+  for (const col of ['raw_html', 'url', 'links', 'related_queries']) {
+    try {
+      getDb().exec(`ALTER TABLE runs ADD COLUMN ${col} TEXT`);
+    } catch {
+      // Column already exists — no-op.
+    }
+  }
+  // Claim column on queries for atomic db-cli next handoff.
+  try {
+    getDb().exec('ALTER TABLE queries ADD COLUMN claimed_at TEXT');
+  } catch {
+    // Column already exists — no-op.
   }
 }

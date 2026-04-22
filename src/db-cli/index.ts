@@ -3,6 +3,8 @@ import { closeDb } from '../db/connection.ts';
 import { migrate } from '../db/migrate.ts';
 import { cmdStatus } from './status.ts';
 import { cmdHasToday } from './has-today.ts';
+import { cmdHasRecent } from './has-recent.ts';
+import { cmdNext, cmdRelease } from './next.ts';
 import { cmdAppend } from './append.ts';
 import { cmdList } from './list.ts';
 import { cmdToday } from './today.ts';
@@ -21,6 +23,11 @@ Usage:
 Results:
   status                           Count of runs, today's runs, distinct queries and brands
   has-today --query "<text>"       Exit 0 if today has a run for query, 1 otherwise
+  has-recent --query "<text>" [--days 7] [--json]
+                                   Print 'fresh'/'stale' (or JSON); always exits 0
+  next [--pack <name>] [--days 7] [--limit N] [--json|--ids-only|--no-claim]
+                                   Hand out stale/never-run queries with atomic claim
+  release <id>                     Clear the claim on a query (manual unstick)
   append                           Read JSON record from stdin and insert atomically
   list [--date YYYY-MM-DD] [--pack <name>] [--json]
   today [--json]
@@ -99,6 +106,15 @@ async function main(): Promise<void> {
         process.exitCode = (await cmdHasToday(flags)) ? 0 : 1;
         break;
       }
+      case 'has-recent':
+        await cmdHasRecent(parseFlags(rest).flags);
+        break;
+      case 'next':
+        await cmdNext(parseFlags(rest).flags);
+        break;
+      case 'release':
+        await cmdRelease(parseFlags(rest).positionals);
+        break;
       case 'append':
         await cmdAppend();
         break;
