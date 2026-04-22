@@ -9,7 +9,7 @@ export async function cmdList(flags: Record<string, string | boolean>): Promise<
     const out = rows.map((r) => ({
       id: r.id,
       date: r.date,
-      keyword: r.keyword,
+      query: r.query,
       pack: r.pack,
       platform: r.platform,
       timestamp: r.timestamp,
@@ -21,6 +21,6 @@ export async function cmdList(flags: Record<string, string | boolean>): Promise<
     return;
   }
   for (const r of rows) {
-    console.log(`${r.date}\t${r.pack}\t${r.total_brands}\t${r.keyword}`);
+    console.log(`${r.date}\t${r.pack}\t${r.total_brands}\t${r.query}`);
   }
 }

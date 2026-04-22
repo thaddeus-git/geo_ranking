@@ -11,6 +11,6 @@ export async function cmdBrandHistory(name: string | undefined, flags: Record<st
     return;
   }
   for (const r of rows) {
-    console.log(`${r.date}\t#${r.rank}\t${r.pack}\t${r.keyword}`);
+    console.log(`${r.date}\t#${r.rank}\t${r.pack}\t${r.query}`);
   }
 }
