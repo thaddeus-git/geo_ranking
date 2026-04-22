@@ -11,7 +11,7 @@ export interface BrandRow {
 
 export interface RunRecord {
   date: string;
-  keyword: string;
+  query: string;
   pack: string;
   platform: string;
   response_text: string;
@@ -23,7 +23,7 @@ export interface RunRecord {
 export interface RunRow {
   id: number;
   date: string;
-  keyword: string;
+  query: string;
   pack: string;
   platform: string;
   response_text: string;
@@ -32,11 +32,11 @@ export interface RunRow {
   new_brands: string;
 }
 
-export function hasRunToday(keyword: string, platform = 'doubao'): boolean {
+export function hasRunToday(query: string, platform = 'doubao'): boolean {
   const today = localToday();
   const row = getDb()
-    .prepare('SELECT 1 FROM runs WHERE date = ? AND keyword = ? AND platform = ? LIMIT 1')
-    .get(today, keyword, platform);
+    .prepare('SELECT 1 FROM runs WHERE date = ? AND query = ? AND platform = ? LIMIT 1')
+    .get(today, query, platform);
   return row !== undefined;
 }
 
@@ -45,12 +45,12 @@ export function appendRun(rec: RunRecord): number {
   const insert = db.transaction((r: RunRecord) => {
     const info = db
       .prepare(
-        `INSERT INTO runs (date, keyword, pack, platform, response_text, timestamp, total_brands, new_brands)
+        `INSERT INTO runs (date, query, pack, platform, response_text, timestamp, total_brands, new_brands)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         r.date,
-        r.keyword,
+        r.query,
         r.pack,
         r.platform,
         r.response_text,
@@ -78,7 +78,7 @@ export function listRuns(opts: { date?: string; pack?: string } = {}): RunRow[] 
   if (opts.date) { where.push('date = ?'); params.push(opts.date); }
   if (opts.pack) { where.push('pack = ?'); params.push(opts.pack); }
   const sql =
-    `SELECT id, date, keyword, pack, platform, response_text, timestamp, total_brands, new_brands
+    `SELECT id, date, query, pack, platform, response_text, timestamp, total_brands, new_brands
      FROM runs` +
     (where.length ? ` WHERE ${where.join(' AND ')}` : '') +
     ' ORDER BY date DESC, id DESC';
@@ -97,23 +97,23 @@ export function getBrands(runId: number): BrandRow[] {
   }));
 }
 
-export function brandHistory(name: string): Array<{ date: string; keyword: string; pack: string; rank: number }> {
+export function brandHistory(name: string): Array<{ date: string; query: string; pack: string; rank: number }> {
   return getDb()
     .prepare(
-      `SELECT r.date, r.keyword, r.pack, b.rank
+      `SELECT r.date, r.query, r.pack, b.rank
        FROM brands b JOIN runs r ON r.id = b.run_id
        WHERE b.name = ?
        ORDER BY r.date DESC, b.rank`,
     )
-    .all(name) as Array<{ date: string; keyword: string; pack: string; rank: number }>;
+    .all(name) as Array<{ date: string; query: string; pack: string; rank: number }>;
 }
 
-export function counts(): { runs: number; today: number; keywords: number; brands: number } {
+export function counts(): { runs: number; today: number; queries: number; brands: number } {
   const db = getDb();
   const today = localToday();
   const total = db.prepare('SELECT COUNT(*) AS n FROM runs').get() as { n: number };
   const todayN = db.prepare('SELECT COUNT(*) AS n FROM runs WHERE date = ?').get(today) as { n: number };
-  const kw = db.prepare('SELECT COUNT(DISTINCT keyword) AS n FROM runs').get() as { n: number };
+  const kw = db.prepare('SELECT COUNT(DISTINCT query) AS n FROM runs').get() as { n: number };
   const br = db.prepare('SELECT COUNT(DISTINCT name) AS n FROM brands').get() as { n: number };
-  return { runs: total.n, today: todayN.n, keywords: kw.n, brands: br.n };
+  return { runs: total.n, today: todayN.n, queries: kw.n, brands: br.n };
 }
