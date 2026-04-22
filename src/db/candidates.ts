@@ -14,7 +14,7 @@ export interface BrandCandidate {
 
 export interface CandidateSource {
   date: string;
-  keyword: string;
+  query: string;
   pack: string;
   rank: number;
 }
@@ -75,7 +75,7 @@ export function getCandidate(name: string): BrandCandidate | undefined {
 export function sourcesForCandidate(name: string): CandidateSource[] {
   return getDb()
     .prepare(
-      `SELECT r.date, r.keyword, r.pack, b.rank
+      `SELECT r.date, r.query, r.pack, b.rank
        FROM brands b JOIN runs r ON r.id = b.run_id
        WHERE b.name = ?
        ORDER BY r.date DESC, b.rank`,

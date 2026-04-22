@@ -22,7 +22,7 @@ export async function cmdAppend(): Promise<void> {
     process.exit(2);
   }
   const rec = parsed as Partial<RunRecord>;
-  const required: (keyof RunRecord)[] = ['date', 'keyword', 'pack', 'response_text', 'timestamp'];
+  const required: (keyof RunRecord)[] = ['date', 'query', 'pack', 'response_text', 'timestamp'];
   for (const k of required) {
     if (!rec[k]) {
       console.error(`append: missing required field: ${k}`);
@@ -31,7 +31,7 @@ export async function cmdAppend(): Promise<void> {
   }
   const run: RunRecord = {
     date: rec.date!,
-    keyword: rec.keyword!,
+    query: rec.query!,
     pack: rec.pack!,
     platform: rec.platform ?? 'doubao',
     response_text: rec.response_text!,
@@ -45,7 +45,7 @@ export async function cmdAppend(): Promise<void> {
   } catch (e) {
     const msg = (e as Error).message;
     if (msg.includes('UNIQUE')) {
-      console.error(`append: already exists for (date=${run.date}, keyword=${run.keyword}, platform=${run.platform})`);
+      console.error(`append: already exists for (date=${run.date}, query=${run.query}, platform=${run.platform})`);
       process.exit(3);
     }
     throw e;

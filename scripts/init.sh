@@ -64,11 +64,11 @@ else
   ok "competitors catalog already in DB: $COMP_COUNT brands"
 fi
 
-# 5. Keywords
+# 5. Queries
 echo ""
-echo "5. Keywords"
-ACTIVE=$(./bin/db-cli keywords list --json | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>console.log(JSON.parse(s).length))")
-ok "active keywords in DB: $ACTIVE"
+echo "5. Queries"
+ACTIVE=$(./bin/db-cli queries list --json | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>console.log(JSON.parse(s).length))")
+ok "active queries in DB: $ACTIVE"
 
 # 6. Chrome CDP reachability (doubao)
 echo ""
@@ -99,6 +99,6 @@ echo "================="
 ok "Setup complete."
 echo ""
 echo "  Run the collector:  claude --agent geo-collector"
-echo "  Add a keyword:      ./bin/db-cli keywords add --keyword \"...\" --pack <slug>"
+echo "  Add a query:        ./bin/db-cli queries add --query \"...\" --pack <slug>"
 echo "  Status:             ./bin/db-cli status"
 echo ""

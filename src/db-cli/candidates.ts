@@ -64,7 +64,7 @@ function cmdShow(name: string | undefined): void {
   if (sources.length) {
     console.log('sources:');
     for (const s of sources) {
-      console.log(`  ${s.date}  rank=${s.rank}  [${s.pack}] ${s.keyword}`);
+      console.log(`  ${s.date}  rank=${s.rank}  [${s.pack}] ${s.query}`);
     }
   }
 }

@@ -16,7 +16,7 @@ Installs Node deps, creates `data/geo_results.db`, and verifies Chrome CDP / pyt
 claude --agent geo-collector
 ```
 
-The agent reads active keywords from the DB, queries Doubao, extracts brands via the `brand-extractor` skill, and appends one row to `runs` + N rows to `brands` via `db-cli append`.
+The agent reads active queries from the DB, queries Doubao, extracts brands via the `brand-extractor` skill, and appends one row to `runs` + N rows to `brands` via `db-cli append`.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ The agent reads active keywords from the DB, queries Doubao, extracts brands via
 ```
 .claude/agents/geo-collector.md   — orchestrator loop
 .claude/skills/brand-extractor/   — LLM brand extraction + new-entrant detection
-bin/db-cli                        — Node/TS CLI: keywords + runs + brands + competitors (SQLite)
+bin/db-cli                        — Node/TS CLI: queries + runs + brands + competitors (SQLite)
 bin/ge-doubao-cli                 — bash+python3 CDP scraper for doubao.com
 src/db/                           — schema, migrations, prepared-statement helpers
 src/db-cli/                       — one file per subcommand
@@ -46,18 +46,18 @@ scripts/init.sh                   — one-time setup
 .claude/settings.json             — SessionStart hook inlines ./bin PATH injection
 ```
 
-## Adding / managing keywords
+## Adding / managing queries
 
-Keywords live in the `keywords` table, not files.
+Queries live in the `queries` table, not files.
 
 ```bash
-db-cli keywords list
-db-cli keywords add --keyword "展厅机器人都有哪些品牌" --pack exhibition-hall-robot
-db-cli keywords deactivate 3    # soft-delete; history preserved
-db-cli keywords activate 3
+db-cli queries list
+db-cli queries add --query "展厅机器人都有哪些品牌" --pack exhibition-hall-robot
+db-cli queries deactivate 3    # soft-delete; history preserved
+db-cli queries activate 3
 ```
 
-`pack` is a free-form category slug (e.g. `exhibition-hall-robot`, `hospital-guide-robot`). Use the same `pack` for related keywords so you can filter by it later.
+`pack` is a free-form category slug (e.g. `exhibition-hall-robot`, `hospital-guide-robot`). Use the same `pack` for related queries so you can filter by it later.
 
 ## Running queries
 
@@ -90,7 +90,7 @@ Every unknown brand surfaced by the collector is automatically tracked in `brand
 
 ```bash
 db-cli candidates pending                            # unreviewed brands
-db-cli candidates show "新品牌"                      # details + every keyword/date/rank it appeared
+db-cli candidates show "新品牌"                      # details + every query/date/rank it appeared
 db-cli candidates accept "新品牌" --model "X1" --aliases "alias1,alias2"
 db-cli candidates reject "新品牌" --reason "宣传物料"
 db-cli candidates list --status accepted             # all accepted
@@ -103,8 +103,8 @@ After `accept`, the brand is in `competitors` with `source='candidate-accept'` a
 
 `data/geo_results.db` — SQLite, six tables:
 
-- **`keywords`** — `id, keyword, pack, active, created_at`. `UNIQUE(keyword, pack)`.
-- **`runs`** — `id, date, keyword, pack, platform, response_text, timestamp, total_brands, new_brands`. `UNIQUE(date, keyword, platform)` enforces idempotency.
+- **`queries`** — `id, query, pack, active, created_at`. `UNIQUE(query, pack)`.
+- **`runs`** — `id, date, query, pack, platform, response_text, timestamp, total_brands, new_brands`. `UNIQUE(date, query, platform)` enforces idempotency.
 - **`brands`** — `run_id, rank, name, known, matched_competitor`. Cascades on run delete.
 - **`competitors`** — `name, aliases, added_at, source`. `aliases` is a JSON array of brand-level alternate names (e.g. English names). Source is `seed` | `candidate-accept` | `manual`.
 - **`competitor_models`** — `competitor_name, name, aliases` (JSON array). Cascades on competitor delete.
