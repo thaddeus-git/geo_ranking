@@ -1,4 +1,7 @@
-data/
+data/*
+!data/seeds/
+data/seeds/*
+!data/seeds/*.example
 node_modules/
 .env
 .doubao_tab_id

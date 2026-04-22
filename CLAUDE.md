@@ -48,7 +48,14 @@ scripts/init.sh                   — one-time setup
 
 ## Adding / managing queries
 
-Queries live in the `queries` table, not files.
+**Bulk seed a new product line via TSV drop:**
+
+1. Create `data/seeds/<pack-slug>.tsv` — the filename stem becomes the pack slug (e.g. `hospital-guide-robot.tsv` → `pack=hospital-guide-robot`).
+2. Run `bash scripts/init.sh`. The script auto-discovers all `*.tsv` files in `data/seeds/` and seeds them idempotently.
+
+TSV format: one query per line, optionally prefixed with a rank and tab (`<rank>\t<query>`). Lines starting with `#` are comments. See `data/seeds/TEMPLATE.tsv.example` for a full example.
+
+**Single-row edits after initial seed:**
 
 ```bash
 db-cli queries list

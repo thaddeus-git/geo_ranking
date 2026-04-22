@@ -1,0 +1,16 @@
+# Query pack template — copy this file to data/seeds/<pack-slug>.tsv
+#
+# Format:
+#   <rank><TAB><query>   — rank is ignored; only the query text is stored
+#   <query>              — tab-free lines are treated as plain query text
+#
+# Rules:
+#   - Lines starting with # are comments (skipped)
+#   - Blank lines are skipped
+#   - The filename stem becomes the pack slug (e.g. hospital-guide-robot.tsv → pack=hospital-guide-robot)
+#   - Re-running scripts/init.sh is idempotent (INSERT OR IGNORE)
+#
+# Examples:
+1	展厅机器人哪个品牌好
+2	展厅智能机器人推荐
+3	企业展厅导览机器人有哪些
