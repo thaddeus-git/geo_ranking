@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## First-time setup
 
@@ -30,20 +30,50 @@ The agent reads active queries from the DB, queries Doubao, extracts brands via 
 - **python3 + websockets:** `pip3 install websockets` (used by `bin/ge-doubao-cli`).
 - **Configuration:** Copy `.env.example` to `.env` if you want to override defaults. `CDP_PORT` defaults to `9222`. `GEO_DB_PATH` defaults to `data/geo_results.db`.
 
+## Development
+
+```bash
+npm run typecheck   # tsc --noEmit — validate TypeScript before committing
+```
+
+`bin/db-cli` is a thin shell wrapper (`node --import tsx src/db-cli/index.ts "$@"`). No build step — changes to `src/` are live immediately.
+
 ## Architecture
 
+Three layers:
+
+- **`src/db/`** — SQLite connection, `migrate()` (runs on every `db-cli` invocation via `CREATE IF NOT EXISTS`), and prepared-statement helpers per table.
+- **`src/db-cli/`** — one file per subcommand; each imports from `src/db/` directly.
+- **`bin/db-cli`** + **`bin/ge-doubao-cli`** — thin shell wrappers; `bin/` is injected into PATH by the SessionStart hook in `.claude/settings.json`.
+
+The agent loop (`.claude/agents/geo-collector.md`) is the only orchestrator. It calls `ge-doubao-cli` for scraping, the `brand-extractor` skill for LLM extraction, then writes results via `db-cli append`.
+
+### `db-cli append` — stdin JSON shape
+
+Required fields: `date`, `query`, `pack`, `response_text`, `timestamp`.
+Optional: `platform` (default `"doubao"`), `url`, `raw_html`, `brands[]`, `new_brands[]`.
+
+```json
+{
+  "date": "YYYY-MM-DD",
+  "query": "...",
+  "pack": "<slug>",
+  "platform": "doubao",
+  "response_text": "...",
+  "timestamp": "...",
+  "url": "...",
+  "raw_html": "...",
+  "brands": [{"rank": 1, "name": "...", "known": true, "matched_competitor": "..."}],
+  "new_brands": ["..."]
+}
 ```
-.claude/agents/geo-collector.md   — orchestrator loop
-.claude/skills/brand-extractor/   — LLM brand extraction + new-entrant detection
-bin/db-cli                        — Node/TS CLI: queries + runs + brands + competitors (SQLite)
-bin/ge-doubao-cli                 — bash+python3 CDP scraper for doubao.com
-src/db/                           — schema, migrations, prepared-statement helpers
-src/db-cli/                       — one file per subcommand
-competitors.json                  — frozen seed; imported once into DB by scripts/init.sh
-scripts/import-competitors.ts     — one-time importer: competitors.json → DB (idempotent)
-data/geo_results.db               — gitignored; all state lives here
-scripts/init.sh                   — one-time setup
-.claude/settings.json             — SessionStart hook inlines ./bin PATH injection
+
+Do **not** populate `links` or `related_queries` — those are parsed from `raw_html` in a separate offline pass.
+
+**Piping is blocked by the permission engine.** Pass payloads via file redirect:
+```bash
+# Write payload with the Write tool, then:
+db-cli append < /tmp/geo_record.json
 ```
 
 ## Adding / managing queries
